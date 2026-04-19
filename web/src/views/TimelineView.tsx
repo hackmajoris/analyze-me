@@ -7,10 +7,11 @@ import { LineChart } from '../components/LineChart';
 interface TimelineViewProps {
   showBand: boolean;
   chartType: ChartType;
+  selectedLab: string;
 }
 
-export function TimelineView({ showBand, chartType }: TimelineViewProps) {
-  const { markers, categories, annotations, loading, error } = useMarkerData();
+export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewProps) {
+  const { markers, categories, annotations, loading, error } = useMarkerData(selectedLab);
   const [selectedId, setSelectedId] = useState('');
   const [compareId, setCompareId] = useState<string | null>(null);
 

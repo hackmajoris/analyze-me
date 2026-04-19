@@ -14,7 +14,7 @@ function series(seed: number, trend: (v: number, i: number) => number) {
   let v = seed;
   return TEST_DATES.map((date, i) => {
     v = trend(v, i);
-    return { date, value: +v.toFixed(2) };
+    return { date, value: +v.toFixed(2), lab: '', refLow: 0, refHigh: 0 };
   });
 }
 

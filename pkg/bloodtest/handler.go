@@ -49,6 +49,23 @@ func (h *Handler) HandleGetCategories(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(categories)
 }
 
+// HandleGetLabs returns the list of distinct lab names
+func (h *Handler) HandleGetLabs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	labs, err := h.store.GetLabs()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(labs)
+}
+
 // HandleGetAnnotations returns all annotations
 func (h *Handler) HandleGetAnnotations(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

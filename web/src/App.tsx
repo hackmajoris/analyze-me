@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Density, ChartType } from './types';
 import { GridView } from './views/GridView';
 import { TimelineView } from './views/TimelineView';
+import { useLabs } from './hooks/useMarkerData';
 
 type Variation = 'grid' | 'timeline';
 
@@ -21,6 +22,9 @@ export function App() {
   const [showBand, setShowBand] = useState(DEFAULTS.showBand);
   const [dark, setDark] = useState(DEFAULTS.dark);
   const [tweaksOpen, setTweaksOpen] = useState(false);
+  const [selectedLab, setSelectedLab] = useState('all');
+
+  const labs = useLabs();
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -51,6 +55,25 @@ export function App() {
             Timeline
           </button>
         </div>
+        {labs.length > 0 && (
+          <div className="lab-tabs">
+            <button
+              className={selectedLab === 'all' ? 'active' : ''}
+              onClick={() => setSelectedLab('all')}
+            >
+              All labs
+            </button>
+            {labs.map(lab => (
+              <button
+                key={lab}
+                className={selectedLab === lab ? 'active' : ''}
+                onClick={() => setSelectedLab(lab)}
+              >
+                {lab}
+              </button>
+            ))}
+          </div>
+        )}
         <button
           className="tweaks-trigger"
           title="Tweaks"
@@ -62,9 +85,9 @@ export function App() {
       </nav>
 
       {variation === 'grid' ? (
-        <GridView density={density} showBand={showBand} chartType={chartType} />
+        <GridView density={density} showBand={showBand} chartType={chartType} selectedLab={selectedLab} />
       ) : (
-        <TimelineView showBand={showBand} chartType={chartType} />
+        <TimelineView showBand={showBand} chartType={chartType} selectedLab={selectedLab} />
       )}
 
       <div className={`tweaks ${tweaksOpen ? 'active' : ''}`}>

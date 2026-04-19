@@ -70,7 +70,7 @@ export function DetailModal({ marker, markers, categories, annotations, onClose,
           {prev && (
             <div className={`stat${status === 'high' ? ' stat--alarm' : ''}`}>
               <div className="stat-label">Δ vs previous</div>
-              <div className={`stat-value ${status === 'high' ? 'stat-value--alarm' : `delta--${d >= 0 ? 'up' : 'down'}`}`}>
+              <div className={`stat-value ${status === 'high' ? 'stat-value--alarm' : status === 'ok' ? 'delta--ok' : `delta--${d >= 0 ? 'up' : 'down'}`}`}>
                 <span className="num">{d >= 0 ? '+' : ''}{d.toFixed(1)}%</span>
               </div>
               <div className="stat-sub">from {fmtNum(prev.value)} {marker.unit}</div>

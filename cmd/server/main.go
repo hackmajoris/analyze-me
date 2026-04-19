@@ -44,6 +44,7 @@ func run(args []string, out io.Writer) error {
 	mux.HandleFunc("/api/markers", handler.HandleGetMarkers)
 	mux.HandleFunc("/api/categories", handler.HandleGetCategories)
 	mux.HandleFunc("/api/annotations", handler.HandleGetAnnotations)
+	mux.HandleFunc("/api/labs", handler.HandleGetLabs)
 
 	// Serve web app (SPA fallback)
 	mux.Handle("/", web.Handler())

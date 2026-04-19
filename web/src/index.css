@@ -87,6 +87,20 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
   background: var(--text); color: var(--bg); font-weight: 600;
 }
 
+.lab-tabs {
+  display: inline-flex; background: var(--panel); padding: 4px; border-radius: 999px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--line); gap: 2px;
+}
+
+.lab-tabs button {
+  padding: 6px 14px; border-radius: 999px; font-weight: 500; font-size: 12px;
+  color: var(--text-dim); transition: all 0.18s ease;
+}
+
+.lab-tabs button.active {
+  background: var(--text); color: var(--bg); font-weight: 600;
+}
+
 .tweaks-trigger {
   width: 36px; height: 36px; border-radius: 50%;
   background: var(--panel); border: 1px solid var(--line);
@@ -277,6 +291,14 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
 
 .stat { padding: 14px 16px; background: var(--panel); display: flex; flex-direction: column; gap: 4px; }
 .stat--hero { background: var(--tint, var(--panel)); }
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm) {
+  background: oklch(0.42 0.15 155) !important;
+}
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm) .stat-label,
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm) .stat-value,
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm) .stat-sub {
+  color: white;
+}
 
 .stat-label {
   font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
@@ -340,6 +362,7 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
 .tt-name { font-weight: 500; color: var(--text); }
 .tt-val { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .tt-unit { font-weight: 500; color: var(--text-dim); font-size: 0.85em; }
+.tt-lab { font-size: 10px; color: var(--text-dim); margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); }
 
 /* ---------- Compare ---------- */
 .compare-row {

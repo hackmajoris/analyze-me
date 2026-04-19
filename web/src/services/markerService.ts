@@ -13,6 +13,11 @@ export interface IMarkerService {
   getMarkers(): Promise<Marker[]>;
 
   /**
+   * Fetch the list of distinct lab names
+   */
+  getLabs(): Promise<string[]>;
+
+  /**
    * Fetch all categories (lab test groupings)
    */
   getCategories(): Promise<Record<string, Category>>;

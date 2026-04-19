@@ -8,10 +8,11 @@ interface GridViewProps {
   density: Density;
   showBand: boolean;
   chartType: ChartType;
+  selectedLab: string;
 }
 
-export function GridView({ density, showBand, chartType }: GridViewProps) {
-  const { markers, categories, loading, error } = useMarkerData();
+export function GridView({ density, showBand, chartType, selectedLab }: GridViewProps) {
+  const { markers, categories, loading, error } = useMarkerData(selectedLab);
   const [open, setOpen] = useState<Marker | null>(null);
   const [filter, setFilter] = useState('all');
 

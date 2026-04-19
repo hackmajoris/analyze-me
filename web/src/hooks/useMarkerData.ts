@@ -1,8 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Marker, Category, Annotation } from '../types';
 import { createMarkerService } from '../services/markerService';
 
-export function useMarkerData() {
+export function useLabs() {
+  const [labs, setLabs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const service = createMarkerService();
+    service.getLabs().then(setLabs).catch(console.error);
+  }, []);
+
+  return labs;
+}
+
+export function useMarkerData(selectedLab = 'all') {
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -31,5 +42,20 @@ export function useMarkerData() {
       });
   }, []);
 
-  return { markers, categories, annotations, loading, error };
+  // Apply lab filter client-side so we don't re-fetch on every switch
+  const filteredMarkers = useMemo(() => {
+    if (selectedLab === 'all') return markers;
+
+    return markers
+      .map(m => {
+        const values = m.values.filter(v => v.lab === selectedLab);
+        if (values.length === 0) return null;
+        // Derive ref range from the last data point of this lab
+        const last = values[values.length - 1];
+        return { ...m, values, refLow: last.refLow, refHigh: last.refHigh };
+      })
+      .filter((m): m is Marker => m !== null);
+  }, [markers, selectedLab]);
+
+  return { markers: filteredMarkers, categories, annotations, loading, error };
 }

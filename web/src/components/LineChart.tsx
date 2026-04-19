@@ -97,9 +97,6 @@ export function LineChart({
         {yTickVals.map((v, i) => (
           <g key={i}>
             <line x1={pad.l} x2={pad.l + w} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeDasharray="2 4" />
-            <text x={pad.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--text-dim)" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {v.toFixed(v < 10 ? 1 : 0)}
-            </text>
           </g>
         ))}
 
@@ -112,6 +109,13 @@ export function LineChart({
               stroke="currentColor" strokeDasharray="3 3" opacity="0.35" />
             <line x1={pad.l} x2={pad.l + w} y1={y(refHigh)} y2={y(refHigh)}
               stroke="currentColor" strokeDasharray="3 3" opacity="0.35" />
+            {/* reference band labels */}
+            <text x={pad.l - 8} y={y(refLow) + 4} textAnchor="end" fontSize="12" fontWeight="600" fill="currentColor" opacity="0.9" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {refLow.toFixed(refLow < 10 ? 1 : 0)}
+            </text>
+            <text x={pad.l - 8} y={y(refHigh) + 4} textAnchor="end" fontSize="12" fontWeight="600" fill="currentColor" opacity="0.9" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {refHigh.toFixed(refHigh < 10 ? 1 : 0)}
+            </text>
           </g>
         )}
 
@@ -216,9 +220,12 @@ export function LineChart({
             <span className="tt-dot" style={{ background: 'currentColor' }} />
             <span className="tt-name">{marker.short}</span>
             <span className="tt-val">
-              {values[hoverIdx].value} <span className="tt-unit">{marker.unit}</span>
+              {values[hoverIdx].label || values[hoverIdx].value} <span className="tt-unit">{marker.unit}</span>
             </span>
           </div>
+          {values[hoverIdx].lab && (
+            <div className="tt-lab">{values[hoverIdx].lab}</div>
+          )}
           {compareMarker && (
             <div className="tt-row" style={{ color: `var(--cat-${compareMarker.category})` }}>
               <span className="tt-dot" style={{ background: 'currentColor' }} />

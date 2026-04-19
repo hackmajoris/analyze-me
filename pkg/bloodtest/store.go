@@ -75,17 +75,21 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 
-	// Second pass: get all values for each test code, grouped by collection date
+	// Second pass: get all values per report (preserving lab and per-entry ref ranges)
 	valueQuery := `
-		SELECT DISTINCT
-			test_code,
+		SELECT
+			tr.test_code,
 			r.collection_date,
-			AVG(result_numeric) as avg_value
+			r.lab_name,
+			AVG(tr.result_numeric) as avg_value,
+			AVG(tr.ref_min) as avg_ref_min,
+			AVG(tr.ref_max) as avg_ref_max,
+			MAX(tr.result_text) as result_text
 		FROM test_results tr
 		JOIN reports r ON tr.report_id = r.id
-		WHERE result_numeric IS NOT NULL
-		GROUP BY test_code, r.collection_date
-		ORDER BY test_code, r.collection_date
+		WHERE tr.result_numeric IS NOT NULL
+		GROUP BY tr.test_code, r.id, r.collection_date, r.lab_name
+		ORDER BY tr.test_code, r.collection_date
 	`
 
 	valueRows, err := s.db.Query(valueQuery)
@@ -95,22 +99,26 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 	defer valueRows.Close()
 
 	for valueRows.Next() {
-		var code, date sql.NullString
+		var code, date, lab, resultText sql.NullString
 		var value float64
+		var refMin, refMax sql.NullFloat64
 
-		if err := valueRows.Scan(&code, &date, &value); err != nil {
+		if err := valueRows.Scan(&code, &date, &lab, &value, &refMin, &refMax, &resultText); err != nil {
 			return nil, fmt.Errorf("scan value: %w", err)
 		}
 
-		// Skip if test_code or date is null
 		if !code.Valid || !date.Valid {
 			continue
 		}
 
 		if marker, ok := testCodeMap[code.String]; ok {
 			marker.Values = append(marker.Values, DataPoint{
-				Date:  date.String,
-				Value: value,
+				Date:    date.String,
+				Value:   value,
+				Lab:     lab.String,
+				RefLow:  refMin.Float64,
+				RefHigh: refMax.Float64,
+				Label:   resultText.String,
 			})
 		}
 	}
@@ -192,6 +200,26 @@ func (s *Store) GetCategories() (map[string]Category, error) {
 	}
 
 	return categories, nil
+}
+
+// GetLabs returns the distinct list of lab names present in the database
+func (s *Store) GetLabs() ([]string, error) {
+	query := `SELECT DISTINCT lab_name FROM reports WHERE lab_name IS NOT NULL AND lab_name != '' ORDER BY lab_name`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("query labs: %w", err)
+	}
+	defer rows.Close()
+
+	var labs []string
+	for rows.Next() {
+		var lab string
+		if err := rows.Scan(&lab); err != nil {
+			return nil, fmt.Errorf("scan lab: %w", err)
+		}
+		labs = append(labs, lab)
+	}
+	return labs, rows.Err()
 }
 
 // GetAnnotations returns timeline annotations (empty for now, can be extended)

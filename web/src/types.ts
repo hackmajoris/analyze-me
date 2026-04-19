@@ -1,6 +1,10 @@
 export interface DataPoint {
   date: string;
   value: number;
+  lab: string;
+  refLow: number;
+  refHigh: number;
+  label?: string; // for qualitative results e.g. "< 75"
 }
 
 export interface Marker {

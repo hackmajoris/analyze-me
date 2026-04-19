@@ -15,7 +15,7 @@ function series(seed: number, trend: (v: number, i: number) => number): DataPoin
   let v = seed;
   return TEST_DATES.map((date, i) => {
     v = trend(v, i);
-    return { date, value: +v.toFixed(2) };
+    return { date, value: +v.toFixed(2), lab: '', refLow: 0, refHigh: 0 };
   });
 }
 
@@ -171,6 +171,10 @@ const ANNOTATIONS: Annotation[] = [
 ];
 
 export class MarkerServiceMock implements IMarkerService {
+  async getLabs(): Promise<string[]> {
+    return ['Mock Lab A', 'Mock Lab B'];
+  }
+
   async getMarkers(): Promise<Marker[]> {
     return MARKERS;
   }

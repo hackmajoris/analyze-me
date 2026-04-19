@@ -3,22 +3,24 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io"
+	"log"
 	"os"
-	"path/filepath"
+	"regexp"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	dbPath := filepath.Join("data", "blood_tests.db")
-	db, err := sql.Open("sqlite3", dbPath)
+func run(args []string, out io.Writer) error {
+	db, err := sql.Open("sqlite3", "data/blood_tests.db")
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
@@ -28,77 +30,130 @@ func run() error {
 		return fmt.Errorf("ping database: %w", err)
 	}
 
-	// Define normalization mappings: old test_name -> (canonical_test_name, canonical_test_code)
-	normalizationMap := map[string][2]string{
-		// Cholesterol Total
-		"COLESTEROL":       {"COLESTEROL TOTAL", "COL"},
-		"COLESTEROL TOTAL": {"COLESTEROL TOTAL", "COL"},
-		"Colesterol total": {"COLESTEROL TOTAL", "COL"},
+	// Find all tests with NULL test_code but with test_name
+	rows, err := db.Query(`
+		SELECT DISTINCT test_name
+		FROM test_results
+		WHERE test_code IS NULL AND test_name IS NOT NULL
+		ORDER BY test_name
+	`)
+	if err != nil {
+		return fmt.Errorf("query test names: %w", err)
+	}
+	defer rows.Close()
 
-		// Cholesterol LDL
-		"Colesterol LDL": {"COLESTEROL LDL", "LDL"},
-		"LDL COLESTEROL": {"COLESTEROL LDL", "LDL"},
-
-		// Cholesterol HDL
-		"Colesterol HDL": {"COLESTEROL HDL", "HDL"},
-		"COLESTEROL HDL": {"COLESTEROL HDL", "HDL"},
-		"HDL COLESTEROL": {"COLESTEROL HDL", "HDL"},
-		"HDLCOLESTEROL":  {"COLESTEROL HDL", "HDL"},
-
-		// Cholesterol VLDL
-		"Colesterol VLDL (calculat)": {"COLESTEROL VLDL", "VLDL"},
+	var testNames []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return fmt.Errorf("scan test name: %w", err)
+		}
+		testNames = append(testNames, name)
 	}
 
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("rows error: %w", err)
+	}
+
+	fmt.Fprintf(out, "Found %d unique test names without codes\n", len(testNames))
+
+	// Generate codes and update
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	for oldName, canonical := range normalizationMap {
-		canonicalName := canonical[0]
-		canonicalCode := canonical[1]
+	updated := 0
+	for _, testName := range testNames {
+		code := generateTestCode(testName)
 
-		query := `UPDATE test_results SET test_name = ?, test_code = ? WHERE test_name = ?`
-		result, err := tx.Exec(query, canonicalName, canonicalCode, oldName)
+		// Check if this code already exists
+		var exists int
+		err := tx.QueryRow(`SELECT COUNT(*) FROM test_results WHERE test_code = ? AND test_code IS NOT NULL`, code).Scan(&exists)
 		if err != nil {
-			return fmt.Errorf("update %s: %w", oldName, err)
+			return fmt.Errorf("check code existence: %w", err)
 		}
 
-		rowsAffected, err := result.RowsAffected()
+		if exists > 0 {
+			// Code already exists, use the existing one
+			fmt.Fprintf(out, "%-50s -> %-15s (existing)\n", testName, code)
+		} else {
+			// Generate a unique code
+			code = makeUniqueCode(tx, code)
+			fmt.Fprintf(out, "%-50s -> %-15s (new)\n", testName, code)
+		}
+
+		// Update all test_results with this test_name to have this code
+		res, err := tx.Exec(`UPDATE test_results SET test_code = ? WHERE test_name = ? AND test_code IS NULL`, code, testName)
 		if err != nil {
-			return fmt.Errorf("rows affected for %s: %w", oldName, err)
+			return fmt.Errorf("update test_results: %w", err)
 		}
 
-		if rowsAffected > 0 {
-			fmt.Printf("✓ Updated %d rows: '%s' → '%s' (code: %s)\n", rowsAffected, oldName, canonicalName, canonicalCode)
+		count, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("rows affected: %w", err)
 		}
+		updated += int(count)
 	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
 	}
 
-	// Verify the changes
-	fmt.Println("\n=== Verification ===")
-	query := `SELECT test_code, test_name, COUNT(*) as count FROM test_results
-	          WHERE test_name LIKE '%COLESTEROL%' OR test_name LIKE '%Colesterol%'
-	          GROUP BY test_code, test_name ORDER BY test_name`
+	fmt.Fprintf(out, "\nUpdated %d test results with generated codes\n", updated)
+	return nil
+}
 
-	rows, err := db.Query(query)
-	if err != nil {
-		return fmt.Errorf("verify query: %w", err)
+// generateTestCode creates a code from test name
+// e.g., "ACID URIC SERIC" -> "ACID_URIC"
+func generateTestCode(testName string) string {
+	// Convert to uppercase and remove special chars
+	name := strings.ToUpper(testName)
+
+	// Remove special characters, keep alphanumeric and spaces
+	reg := regexp.MustCompile(`[^A-Z0-9\s]`)
+	name = reg.ReplaceAllString(name, "")
+
+	// Split on spaces and take first 2 significant words
+	parts := strings.Fields(name)
+	if len(parts) > 2 {
+		parts = parts[:2]
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var code, name string
+	code := strings.Join(parts, "_")
+
+	// Limit length to 20 chars
+	if len(code) > 20 {
+		code = code[:20]
+	}
+
+	return code
+}
+
+// makeUniqueCode appends a suffix if code already exists
+func makeUniqueCode(tx *sql.Tx, code string) string {
+	base := code
+	suffix := 2
+
+	for {
 		var count int
-		if err := rows.Scan(&code, &name, &count); err != nil {
-			return fmt.Errorf("scan result: %w", err)
+		err := tx.QueryRow(`SELECT COUNT(*) FROM test_results WHERE test_code = ?`, code).Scan(&count)
+		if err != nil {
+			log.Printf("error checking code uniqueness: %v", err)
+			return code
 		}
-		fmt.Printf("  %s | %s: %d entries\n", code, name, count)
-	}
 
-	return rows.Err()
+		if count == 0 {
+			return code
+		}
+
+		code = fmt.Sprintf("%s_%d", base, suffix)
+		suffix++
+
+		if suffix > 10 {
+			// Fallback: use with random numeric suffix
+			return fmt.Sprintf("%s_%d", base, suffix)
+		}
+	}
 }

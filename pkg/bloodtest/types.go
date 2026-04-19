@@ -2,8 +2,12 @@ package bloodtest
 
 // DataPoint represents a single measurement at a point in time
 type DataPoint struct {
-	Date  string  `json:"date"`
-	Value float64 `json:"value"`
+	Date    string  `json:"date"`
+	Value   float64 `json:"value"`
+	Lab     string  `json:"lab"`
+	RefLow  float64 `json:"refLow"`
+	RefHigh float64 `json:"refHigh"`
+	Label   string  `json:"label,omitempty"` // for qualitative results e.g. "<75"
 }
 
 // Marker represents a lab test marker with historical data

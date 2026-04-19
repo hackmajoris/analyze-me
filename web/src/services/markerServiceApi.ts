@@ -7,6 +7,10 @@ export class MarkerServiceApi implements IMarkerService {
     return api.get<Marker[]>('/api/markers');
   }
 
+  async getLabs(): Promise<string[]> {
+    return api.get<string[]>('/api/labs');
+  }
+
   async getCategories(): Promise<Record<string, Category>> {
     return api.get<Record<string, Category>>('/api/categories');
   }
