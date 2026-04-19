@@ -1,0 +1,185 @@
+import type { Marker, Category, Annotation, DataPoint } from '../types';
+import type { IMarkerService } from './markerService';
+
+const TEST_DATES: string[] = [
+  '2020-02-14', '2020-09-03',
+  '2021-03-22', '2021-10-11',
+  '2022-01-18', '2022-07-05', '2022-12-02',
+  '2023-05-19', '2023-11-08',
+  '2024-04-02', '2024-10-21',
+  '2025-03-14', '2025-09-09',
+  '2026-02-27',
+];
+
+function series(seed: number, trend: (v: number, i: number) => number): DataPoint[] {
+  let v = seed;
+  return TEST_DATES.map((date, i) => {
+    v = trend(v, i);
+    return { date, value: +v.toFixed(2) };
+  });
+}
+
+const MARKERS: Marker[] = [
+  {
+    id: 'hemoglobin',
+    name: 'Hemoglobin',
+    short: 'Hgb',
+    unit: 'g/dL',
+    category: 'cbc',
+    refLow: 13.5,
+    refHigh: 17.5,
+    description: 'Oxygen-carrying protein in red blood cells.',
+    values: series(15.1, (v, i) => v + (Math.sin(i * 0.9) * 0.3) + (i === 5 ? -0.8 : 0) - 0.02 * i),
+  },
+  {
+    id: 'hematocrit',
+    name: 'Hematocrit',
+    short: 'Hct',
+    unit: '%',
+    category: 'cbc',
+    refLow: 41,
+    refHigh: 53,
+    description: 'Percentage of blood volume made up of red cells.',
+    values: series(45.8, (v, i) => v + Math.sin(i * 1.1 + 0.5) * 0.9 + (i === 7 ? -2.2 : 0)),
+  },
+  {
+    id: 'cholesterol',
+    name: 'Total Cholesterol',
+    short: 'TC',
+    unit: 'mg/dL',
+    category: 'lipids',
+    refLow: 125,
+    refHigh: 200,
+    description: 'Sum of HDL, LDL, and 20% of triglycerides.',
+    values: series(188, (v, i) => v + Math.sin(i * 0.7) * 8 + (i > 7 ? -3 : 1.5) * (i - 6)),
+  },
+  {
+    id: 'ldl',
+    name: 'LDL',
+    short: 'LDL',
+    unit: 'mg/dL',
+    category: 'lipids',
+    refLow: 0,
+    refHigh: 100,
+    description: 'Low-density lipoprotein — "bad" cholesterol.',
+    values: series(118, (v, i) => v + Math.sin(i * 0.6 + 1) * 6 + (i > 8 ? -4 : 1) * 1.2),
+  },
+  {
+    id: 'hdl',
+    name: 'HDL',
+    short: 'HDL',
+    unit: 'mg/dL',
+    category: 'lipids',
+    refLow: 40,
+    refHigh: 80,
+    description: 'High-density lipoprotein — "good" cholesterol.',
+    values: series(48, (v, i) => v + Math.sin(i * 0.8) * 2.5 + 0.6 * i),
+  },
+  {
+    id: 'vitd',
+    name: 'Vitamin D',
+    short: '25-OH',
+    unit: 'ng/mL',
+    category: 'vitamins',
+    refLow: 30,
+    refHigh: 80,
+    description: '25-hydroxyvitamin D — primary status marker.',
+    values: series(22, (v, i) => v + Math.sin(i * 1.3) * 4 + (i > 3 ? 2.5 : 0.2) * 1.1),
+  },
+  {
+    id: 'vitb12',
+    name: 'Vitamin B12',
+    short: 'B12',
+    unit: 'pg/mL',
+    category: 'vitamins',
+    refLow: 200,
+    refHigh: 900,
+    description: 'Cobalamin — essential for nerve & blood cell function.',
+    values: series(410, (v, i) => v + Math.sin(i * 0.5) * 35 + 8 * i),
+  },
+  {
+    id: 'ferritin',
+    name: 'Ferritin',
+    short: 'Fer',
+    unit: 'ng/mL',
+    category: 'vitamins',
+    refLow: 30,
+    refHigh: 400,
+    description: 'Iron storage protein — best marker of body iron stores.',
+    values: series(95, (v, i) => v + Math.sin(i * 0.9) * 18 + (i === 4 ? -40 : 0) + 3 * i),
+  },
+  {
+    id: 'alt',
+    name: 'ALT',
+    short: 'ALT',
+    unit: 'U/L',
+    category: 'liver',
+    refLow: 7,
+    refHigh: 45,
+    description: 'Alanine aminotransferase — liver enzyme.',
+    values: series(28, (v, i) => v + Math.sin(i * 1.2 + 2) * 5 + (i === 6 ? 18 : 0) - 0.4 * i),
+  },
+  {
+    id: 'ast',
+    name: 'AST',
+    short: 'AST',
+    unit: 'U/L',
+    category: 'liver',
+    refLow: 8,
+    refHigh: 40,
+    description: 'Aspartate aminotransferase — liver/muscle enzyme.',
+    values: series(24, (v, i) => v + Math.sin(i * 1.1 + 1) * 4 + (i === 6 ? 12 : 0) - 0.3 * i),
+  },
+  {
+    id: 'tsh',
+    name: 'TSH',
+    short: 'TSH',
+    unit: 'mIU/L',
+    category: 'thyroid',
+    refLow: 0.4,
+    refHigh: 4.0,
+    description: 'Thyroid-stimulating hormone.',
+    values: series(2.1, (v, i) => v + Math.sin(i * 0.8) * 0.4 + (i === 9 ? 1.6 : 0) * 0.8 + 0.03 * i),
+  },
+  {
+    id: 'glucose',
+    name: 'Glucose (fasting)',
+    short: 'Glu',
+    unit: 'mg/dL',
+    category: 'metabolic',
+    refLow: 70,
+    refHigh: 99,
+    description: 'Fasting plasma glucose.',
+    values: series(89, (v, i) => v + Math.sin(i * 0.7 + 0.3) * 3 + 0.8 * i),
+  },
+];
+
+const CATEGORIES: Record<string, Category> = {
+  cbc:       { label: 'Complete Blood Count', color: 'oklch(0.68 0.14 25)',  tint: 'oklch(0.96 0.025 25)'   },
+  lipids:    { label: 'Lipid Panel',           color: 'oklch(0.72 0.14 65)',  tint: 'oklch(0.965 0.025 65)'  },
+  vitamins:  { label: 'Vitamins & Minerals',   color: 'oklch(0.68 0.14 145)', tint: 'oklch(0.965 0.025 145)' },
+  liver:     { label: 'Liver Function',        color: 'oklch(0.62 0.14 295)', tint: 'oklch(0.965 0.02 295)'  },
+  thyroid:   { label: 'Thyroid',               color: 'oklch(0.65 0.12 195)', tint: 'oklch(0.965 0.022 195)' },
+  metabolic: { label: 'Metabolic',             color: 'oklch(0.62 0.14 250)', tint: 'oklch(0.965 0.022 250)' },
+};
+
+const ANNOTATIONS: Annotation[] = [
+  { date: '2022-07-05', title: 'Started running',      body: 'Began consistent cardio, 3×/week.' },
+  { date: '2023-05-19', title: 'Dietary change',       body: 'Cut processed sugar, increased leafy greens.' },
+  { date: '2024-10-21', title: 'Vitamin D supplement', body: 'Added 2000 IU daily after low reading.' },
+  { date: '2025-09-09', title: 'Recovered from flu',   body: 'Had viral illness 2 weeks prior to draw.' },
+];
+
+export class MarkerServiceMock implements IMarkerService {
+  async getMarkers(): Promise<Marker[]> {
+    return MARKERS;
+  }
+
+  async getCategories(): Promise<Record<string, Category>> {
+    return CATEGORIES;
+  }
+
+  async getAnnotations(): Promise<Annotation[]> {
+    return ANNOTATIONS;
+  }
+}
