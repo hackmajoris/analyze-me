@@ -1,22 +1,26 @@
-import type { Marker, Density, ChartType } from '../types';
-import { CATEGORIES } from '../data/markers';
+import type { Marker, Density, ChartType, Category } from '../types';
 import { rangeStatus, fmtNum, fmtDate, deltaPct } from '../lib/chartUtils';
 import { Sparkline } from './Sparkline';
 
 interface SummaryCardProps {
   marker: Marker;
+  categories: Record<string, Category>;
   density: Density;
   showBand: boolean;
   chartType: ChartType;
   onOpen: (marker: Marker) => void;
 }
 
-export function SummaryCard({ marker, density, showBand, chartType, onOpen }: SummaryCardProps) {
-  const cat = CATEGORIES[marker.category];
+export function SummaryCard({ marker, categories, density, showBand, chartType, onOpen }: SummaryCardProps) {
+  const cat = categories[marker.category];
   const latest = marker.values[marker.values.length - 1];
   const prev = marker.values[marker.values.length - 2];
-  const d = deltaPct(latest.value, prev.value);
+  const d = prev ? deltaPct(latest.value, prev.value) : 0;
   const status = rangeStatus(latest.value, marker.refLow, marker.refHigh);
+
+  if (!cat || !latest) {
+    return null;
+  }
 
   return (
     <button

@@ -15,11 +15,25 @@ export function Sparkline({ marker, height = 58, showBand = true, chartType = 'l
   const w = vbW - pad.l - pad.r;
   const h = height - pad.t - pad.b;
 
+  // Handle edge cases: empty or single-point data
+  if (values.length === 0) {
+    return null;
+  }
+
   const vals = values.map(v => v.value);
   const min = Math.min(refLow, ...vals) - 2;
   const max = Math.max(refHigh, ...vals) + 2;
-  const x = (i: number) => pad.l + (i / (values.length - 1)) * w;
-  const y = (v: number) => pad.t + h - ((v - min) / (max - min)) * h;
+  const range = max - min;
+
+  const x = (i: number) => {
+    if (values.length === 1) return pad.l + w / 2;
+    return pad.l + (i / (values.length - 1)) * w;
+  };
+
+  const y = (v: number) => {
+    if (range === 0) return pad.t + h / 2; // Handle case where all values are identical
+    return pad.t + h - ((v - min) / range) * h;
+  };
 
   const path = values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(v.value).toFixed(1)}`).join(' ');
   const areaPath = `${path} L ${x(values.length - 1).toFixed(1)} ${pad.t + h} L ${x(0).toFixed(1)} ${pad.t + h} Z`;

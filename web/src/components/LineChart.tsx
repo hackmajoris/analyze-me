@@ -44,7 +44,7 @@ export function LineChart({
   const min = dataMin - span * 0.12;
   const max = dataMax + span * 0.12;
 
-  const x = (i: number) => pad.l + (i / (values.length - 1)) * w;
+  const x = (i: number) => pad.l + (values.length === 1 ? 0.5 : i / (values.length - 1)) * w;
   const y = (v: number) => pad.t + h - ((v - min) / (max - min)) * h;
 
   // Build compare scale once

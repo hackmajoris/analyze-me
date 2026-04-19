@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { ChartType } from '../types';
-import { MARKERS, CATEGORIES, ANNOTATIONS } from '../data/markers';
+import { useMarkerData } from '../hooks/useMarkerData';
 import { rangeStatus, fmtNum, fmtDate, deltaPct } from '../lib/chartUtils';
 import { LineChart } from '../components/LineChart';
 
@@ -10,42 +10,60 @@ interface TimelineViewProps {
 }
 
 export function TimelineView({ showBand, chartType }: TimelineViewProps) {
-  const [selectedId, setSelectedId] = useState(MARKERS[0].id);
+  const { markers, categories, annotations, loading, error } = useMarkerData();
+  const [selectedId, setSelectedId] = useState('');
   const [compareId, setCompareId] = useState<string | null>(null);
 
-  const selected = MARKERS.find(m => m.id === selectedId)!;
-  const compare = compareId ? (MARKERS.find(m => m.id === compareId) ?? null) : null;
-  const cat = CATEGORIES[selected.category];
+  const byCat = useMemo(() => {
+    const g: Record<string, typeof markers> = {};
+    markers.forEach(m => { (g[m.category] = g[m.category] ?? []).push(m); });
+    return g;
+  }, [markers]);
+
+  // Set initial selection when markers load
+  if (selectedId === '' && markers.length > 0) {
+    setSelectedId(markers[0].id);
+  }
+
+  if (loading) {
+    return <div className="view view-timeline"><aside className="sidebar"><h1 className="view-title">Loading...</h1></aside></div>;
+  }
+
+  if (error) {
+    return <div className="view view-timeline"><aside className="sidebar"><h1 className="view-title">Error: {error}</h1></aside></div>;
+  }
+
+  const selected = markers.find(m => m.id === selectedId);
+  if (!selected) {
+    return <div className="view view-timeline"><aside className="sidebar"><h1 className="view-title">No data available</h1></aside></div>;
+  }
+
+  const compare = compareId ? (markers.find(m => m.id === compareId) ?? null) : null;
+  const cat = categories[selected.category];
 
   const latest = selected.values[selected.values.length - 1];
   const prev = selected.values[selected.values.length - 2];
-  const d = deltaPct(latest.value, prev.value);
+  const d = prev ? deltaPct(latest.value, prev.value) : 0;
   const vals = selected.values.map(v => v.value);
   const minVal = Math.min(...vals);
   const maxVal = Math.max(...vals);
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
   const status = rangeStatus(latest.value, selected.refLow, selected.refHigh);
 
-  const markerAnnotations = ANNOTATIONS.filter(a => selected.values.some(v => v.date === a.date));
-
-  const byCat = useMemo(() => {
-    const g: Record<string, typeof MARKERS> = {};
-    MARKERS.forEach(m => { (g[m.category] = g[m.category] ?? []).push(m); });
-    return g;
-  }, []);
+  const markerAnnotations = annotations.filter(a => selected.values.some(v => v.date === a.date));
 
   return (
     <div className="view view-timeline">
       <aside className="sidebar">
         <div className="sidebar-head">
           <h1 className="view-title">Markers</h1>
-          <div className="view-sub">12 · 14 tests</div>
+          <div className="view-sub">{markers.length} · {Object.keys(categories).length} categories</div>
         </div>
         {Object.entries(byCat).map(([catId, list]) => (
           <div key={catId} className="sidebar-group">
-            <div className="sidebar-group-head" style={{ color: CATEGORIES[catId].color }}>
-              <span className="sidebar-swatch" style={{ background: CATEGORIES[catId].color }} />
-              {CATEGORIES[catId].label}
+            <div className="sidebar-group-head" style={{ color: categories[catId]?.color }}>
+              <span className="sidebar-swatch" style={{ background: categories[catId]?.color }} />
+              {categories[catId]?.label}
             </div>
             <ul className="sidebar-list">
               {list.map(m => {
@@ -57,7 +75,7 @@ export function TimelineView({ showBand, chartType }: TimelineViewProps) {
                   <li
                     key={m.id}
                     className={`sidebar-item ${isSel ? 'selected' : ''} ${isCmp ? 'compare' : ''}`}
-                    style={{ '--cat-color': CATEGORIES[m.category].color } as React.CSSProperties}
+                    style={{ '--cat-color': categories[m.category]?.color } as React.CSSProperties}
                     onClick={() => setSelectedId(m.id)}
                   >
                     <span className={`status-dot status-${s}`} />
@@ -75,7 +93,7 @@ export function TimelineView({ showBand, chartType }: TimelineViewProps) {
                         } else {
                           setCompareId(m.id);
                           if (m.id === selectedId) {
-                            setSelectedId(MARKERS.find(x => x.id !== m.id)!.id);
+                            setSelectedId(markers.find(x => x.id !== m.id)?.id || '');
                           }
                         }
                       }}
@@ -103,10 +121,12 @@ export function TimelineView({ showBand, chartType }: TimelineViewProps) {
           <div className="hero-value">
             <span className="num">{fmtNum(latest.value)}</span>
             <span className="unit">{selected.unit}</span>
-            <div className={`hero-delta delta--${d >= 0 ? 'up' : 'down'}`}>
-              {d >= 0 ? '↑' : '↓'} {Math.abs(d).toFixed(1)}% from{' '}
-              {fmtDate(prev.date, { month: 'short', year: 'numeric' })}
-            </div>
+            {prev && (
+              <div className={`hero-delta delta--${d >= 0 ? 'up' : 'down'}`}>
+                {d >= 0 ? '↑' : '↓'} {Math.abs(d).toFixed(1)}% from{' '}
+                {fmtDate(prev.date, { month: 'short', year: 'numeric' })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -151,11 +171,11 @@ export function TimelineView({ showBand, chartType }: TimelineViewProps) {
         {compare && compare.id !== selected.id && (
           <div className="compare-legend compare-legend--stage">
             <span className="lg">
-              <span className="lg-line" style={{ background: cat.color }} />
+              <span className="lg-line" style={{ background: cat?.color }} />
               {selected.name}
             </span>
             <span className="lg">
-              <span className="lg-line dashed" style={{ color: CATEGORIES[compare.category].color }} />
+              <span className="lg-line dashed" style={{ color: categories[compare.category]?.color }} />
               {compare.name}
             </span>
           </div>
