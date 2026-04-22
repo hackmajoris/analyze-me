@@ -646,6 +646,7 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
   .stage-head { flex-direction: column; align-items: flex-start; }
   .hero-value { text-align: left; }
   .tweaks { width: calc(100% - 40px); right: 20px; left: 20px; }
+  .lab-tabs { width: 100%; flex-wrap: wrap; border-radius: var(--radius-md); }
 }
 
 @media (max-width: 560px) {
