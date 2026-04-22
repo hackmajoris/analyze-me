@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/hackmajoris/analyze-me/pkg/bloodtest"
+	"github.com/hackmajoris/analyze-me/pkg/upload"
 	"github.com/hackmajoris/analyze-me/pkg/web"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -38,6 +39,7 @@ func run(args []string, out io.Writer) error {
 	// Wire up blood test service
 	store := bloodtest.NewStore(db)
 	handler := bloodtest.NewHandler(store)
+	uploadHandler := upload.NewHandler()
 
 	// Register API routes
 	mux := http.NewServeMux()
@@ -45,6 +47,7 @@ func run(args []string, out io.Writer) error {
 	mux.HandleFunc("/api/categories", handler.HandleGetCategories)
 	mux.HandleFunc("/api/annotations", handler.HandleGetAnnotations)
 	mux.HandleFunc("/api/labs", handler.HandleGetLabs)
+	mux.HandleFunc("/api/upload/zip", uploadHandler.HandleUploadZip)
 
 	// Serve web app (SPA fallback)
 	mux.Handle("/", web.Handler())

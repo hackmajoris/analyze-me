@@ -26,7 +26,12 @@ generate:
 	go generate ./...
 
 dev: build
-	$(BIN) & cd web && npm run dev
+	npx --prefix web concurrently \
+		--names "server,web" \
+		--prefix-colors "cyan.bold,green.bold" \
+		--kill-others-on-fail \
+		"$(BIN)" \
+		"cd web && npm run dev"
 
 web-dev:
 	cd web && npm run dev

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import type { Density, ChartType } from './types';
 import { GridView } from './views/GridView';
 import { TimelineView } from './views/TimelineView';
+import { SettingsView } from './views/SettingsView';
 import { useLabs } from './hooks/useMarkerData';
 
-type Variation = 'grid' | 'timeline';
+type Variation = 'grid' | 'timeline' | 'settings';
 
 const DEFAULTS = {
   density: 'compact' as Density,
@@ -54,8 +55,14 @@ export function App() {
           >
             Timeline
           </button>
+          <button
+            className={variation === 'settings' ? 'active' : ''}
+            onClick={() => setVariation('settings')}
+          >
+            Settings
+          </button>
         </div>
-        {labs.length > 0 && (
+        {labs.length > 0 && variation !== 'settings' && (
           <div className="lab-tabs">
             <button
               className={selectedLab === 'all' ? 'active' : ''}
@@ -84,10 +91,14 @@ export function App() {
         </button>
       </nav>
 
-      {variation === 'grid' ? (
+      {variation === 'grid' && (
         <GridView density={density} showBand={showBand} chartType={chartType} selectedLab={selectedLab} />
-      ) : (
+      )}
+      {variation === 'timeline' && (
         <TimelineView showBand={showBand} chartType={chartType} selectedLab={selectedLab} />
+      )}
+      {variation === 'settings' && (
+        <SettingsView />
       )}
 
       <div className={`tweaks ${tweaksOpen ? 'active' : ''}`}>
