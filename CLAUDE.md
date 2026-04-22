@@ -29,6 +29,7 @@ make web-dev      # frontend dev server (proxies /api to localhost:8080)
 make web-build    # npm ci && npm run build → web/dist/
 make clean        # rm -rf .bin/ web/dist/
 make generate     # go generate ./...
+make dev          # run web-dev and serve concurrently (frontend + backend)
 ```
 
 Run a single Go test:
