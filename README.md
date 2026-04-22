@@ -6,24 +6,24 @@
 
 The easiest way to run the app. Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
+The app reads the database encryption key from macOS Keychain. Store it once before first run:
+
 ```bash
-docker compose up --build
+security add-generic-password -a analyze-me -s analyze-me-db-key -w "your_key"
+```
+
+Then use `run.sh` instead of `docker compose` directly — it retrieves the key automatically:
+
+```bash
+./run.sh up --build   # start (and build)
+./run.sh up -d        # start in background
+./run.sh down         # stop
 ```
 
 Open [http://localhost:8080](http://localhost:8080).
 
 The database is read from and written to your iCloud Drive at:
 `~/Library/Mobile Documents/com~apple~CloudDocs/AnalyzeMe/blood_tests.db`
-
-To stop:
-```bash
-docker compose down
-```
-
-To rebuild after code changes:
-```bash
-docker compose up --build
-```
 
 ---
 
