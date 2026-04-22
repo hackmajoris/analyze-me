@@ -17,19 +17,38 @@ import (
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		_, err := fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		if err != nil {
+			return
+		}
 		os.Exit(1)
 	}
 }
 
 func run(args []string, out io.Writer) error {
-	// Open database
-	dbPath := filepath.Join("data", "blood_tests.db")
+	// Database stored in iCloud Drive for persistence across installs
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("get home dir: %w", err)
+	}
+	dbDir := filepath.Join(home, "Library", "Mobile Documents", "com~apple~CloudDocs", "AnalyzeMe")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return fmt.Errorf("create db dir: %w", err)
+	}
+	dbPath := filepath.Join(dbDir, "blood_tests.db")
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			_, err := fmt.Fprintf(os.Stderr, "error closing database: %v\n", err)
+			if err != nil {
+				return
+			}
+		}
+	}(db)
 
 	// Test connection
 	if err := db.Ping(); err != nil {
@@ -74,6 +93,9 @@ func run(args []string, out io.Writer) error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
-	fmt.Fprintf(out, "Server running on http://localhost%s\n", port)
+	_, err = fmt.Fprintf(out, "Server running on http://localhost%s\n", port)
+	if err != nil {
+		return err
+	}
 	return http.Serve(listener, mux)
 }
