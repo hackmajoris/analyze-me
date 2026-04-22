@@ -2,9 +2,11 @@ export interface DataPoint {
   date: string;
   value: number;
   lab: string;
-  refLow: number;
-  refHigh: number;
+  refLow: number | null;
+  refHigh: number | null;
   label?: string; // for qualitative results e.g. "< 75"
+  expectedText?: string; // for text results e.g. "Negativ"
+  flagged?: boolean; // whether result is outside normal range
 }
 
 export interface Marker {
@@ -13,8 +15,8 @@ export interface Marker {
   short: string;
   unit: string;
   category: string;
-  refLow: number;
-  refHigh: number;
+  refLow: number | null;
+  refHigh: number | null;
   description: string;
   values: DataPoint[];
 }

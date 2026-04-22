@@ -1,4 +1,4 @@
-import type { Marker, ChartType } from '../types';
+import type { Marker, ChartType, RangeStatus } from '../types';
 import { rangeStatus, statusColor } from '../lib/chartUtils';
 
 interface SparklineProps {
@@ -21,8 +21,8 @@ export function Sparkline({ marker, height = 58, showBand = true, chartType = 'l
   }
 
   const vals = values.map(v => v.value);
-  const min = Math.min(refLow, ...vals) - 2;
-  const max = Math.max(refHigh, ...vals) + 2;
+  const min = Math.min(refLow ?? Math.min(...vals), ...vals) - 2;
+  const max = Math.max(refHigh ?? Math.max(...vals), ...vals) + 2;
   const range = max - min;
 
   const x = (i: number) => {
@@ -40,21 +40,33 @@ export function Sparkline({ marker, height = 58, showBand = true, chartType = 'l
 
   return (
     <svg viewBox={`0 0 ${vbW} ${height}`} width="100%" height={height} style={{ display: 'block' }}>
-      {showBand && (
+      {showBand && refLow !== null && (
         <rect
-          x={pad.l} y={y(refHigh)} width={w} height={Math.max(1, y(refLow) - y(refHigh))}
+          x={pad.l} y={refHigh !== null ? y(refHigh) : pad.t}
+          width={w} height={Math.max(1, y(refLow) - (refHigh !== null ? y(refHigh) : pad.t))}
           fill="currentColor" opacity="0.08" rx="2"
         />
       )}
       {chartType !== 'dots' && (
         <>
-          <path d={areaPath} fill="currentColor" opacity="0.09" />
-          <path d={path} fill="none" stroke="currentColor" strokeWidth="1.75"
-            strokeLinejoin="round" strokeLinecap="round" />
+          <path d={areaPath} fill="var(--line)" opacity="0.05" />
+          {values.map((v, i) => {
+            if (i === 0) return null;
+            const s = (refLow === null && refHigh === null)
+              ? (v.flagged ? 'high' : 'ok') as RangeStatus
+              : rangeStatus(v.value, refLow, refHigh);
+            return (
+              <line key={`line-${i}`} x1={x(i - 1)} y1={y(values[i - 1].value)}
+                x2={x(i)} y2={y(v.value)} stroke={statusColor(s)} strokeWidth="1.75"
+                strokeLinejoin="round" strokeLinecap="round" />
+            );
+          })}
         </>
       )}
       {values.map((v, i) => {
-        const s = rangeStatus(v.value, refLow, refHigh);
+        const s = (refLow === null && refHigh === null)
+          ? (v.flagged ? 'high' : 'ok') as RangeStatus
+          : rangeStatus(v.value, refLow, refHigh);
         return (
           <circle
             key={i}

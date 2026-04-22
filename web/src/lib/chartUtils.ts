@@ -1,17 +1,24 @@
 import type { RangeStatus } from '../types';
 
-export function rangeStatus(v: number, refLow: number, refHigh: number): RangeStatus {
-  const span = refHigh - refLow;
+export function rangeStatus(v: number, refLow: number | null, refHigh: number | null): RangeStatus {
+  if ((refLow !== null && v < refLow) || (refHigh !== null && v > refHigh)) return 'high';
+  const span = (refHigh ?? v) - (refLow ?? v);
   const pad = span * 0.1;
-  if (v < refLow || v > refHigh) return 'high';
-  if (v < refLow + pad || v > refHigh - pad) return 'warn';
+  if ((refLow !== null && v < refLow + pad) || (refHigh !== null && v > refHigh - pad)) return 'warn';
   return 'ok';
 }
 
+export function fmtRef(low: number | null, high: number | null): string {
+  if (low !== null && high !== null) return `${low}–${high}`;
+  if (low !== null) return `≥ ${low}`;
+  if (high !== null) return `≤ ${high}`;
+  return '–';
+}
+
 export function statusColor(status: RangeStatus): string {
-  if (status === 'high') return 'oklch(0.62 0.18 28)';
-  if (status === 'warn') return 'oklch(0.72 0.14 75)';
-  return 'oklch(0.58 0.13 155)';
+  if (status === 'high') return 'oklch(0.62 0.18 28)';  // red for out of range
+  if (status === 'warn') return 'oklch(0.72 0.14 75)';  // orange for warning
+  return 'oklch(0.58 0.13 155)';  // green for in range
 }
 
 export function fmtNum(v: number): string {

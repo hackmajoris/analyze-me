@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Marker, ChartType, Category, Annotation } from '../types';
-import { rangeStatus, fmtNum, fmtDate, deltaPct } from '../lib/chartUtils';
+import { rangeStatus, fmtNum, fmtDate, deltaPct, fmtRef } from '../lib/chartUtils';
 import { LineChart } from './LineChart';
 
 interface DetailModalProps {
@@ -29,7 +29,13 @@ export function DetailModal({ marker, markers, categories, annotations, onClose,
   const min = Math.min(...vals);
   const max = Math.max(...vals);
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-  const status = rangeStatus(latest.value, marker.refLow, marker.refHigh);
+
+  // Check if this is a text-only result
+  const isTextOnly = latest.label && marker.refLow === null && marker.refHigh === null;
+  // For text-only results, use flagged status; for numeric, use range comparison
+  const status = isTextOnly && latest.flagged !== undefined
+    ? (latest.flagged ? 'high' : 'ok')
+    : rangeStatus(latest.value, marker.refLow, marker.refHigh);
 
   const markerAnnotations = annotations.filter(a => marker.values.some(v => v.date === a.date));
 
@@ -56,41 +62,63 @@ export function DetailModal({ marker, markers, categories, annotations, onClose,
         </div>
 
         <div className="stat-strip">
-          <div className={`stat stat--hero${status === 'high' ? ' stat--alarm' : ''}`}>
+          <div className={`stat stat--hero${status !== 'ok' ? ` stat--${status}` : ''}`}>
             <div className="stat-label">Latest</div>
             <div className="stat-value">
-              <span className="num">{fmtNum(latest.value)}</span>
-              <span className="unit">{marker.unit}</span>
+              {isTextOnly ? (
+                <>
+                  <span className="num">{latest.label}</span>
+                  {latest.expectedText && <span className="unit" style={{ fontSize: '10px', opacity: 0.7 }}>Expected: {latest.expectedText}</span>}
+                </>
+              ) : (
+                <>
+                  <span className="num">{fmtNum(latest.value)}</span>
+                  <span className="unit">{marker.unit}</span>
+                </>
+              )}
             </div>
             <div className={`stat-sub status-${status}`}>
-              {status === 'ok' ? 'In range' : status === 'warn' ? 'Near edge' : 'Out of range'}
-              {' · '}{fmtDate(latest.date)}
+              {isTextOnly ? (
+                <>
+                  {status === 'ok' ? 'As expected' : 'Unexpected value'}
+                  {' · '}{fmtDate(latest.date)}
+                </>
+              ) : (
+                <>
+                  {status === 'ok' ? 'In range' : status === 'warn' ? 'Near edge' : 'Out of range'}
+                  {' · '}{fmtDate(latest.date)}
+                </>
+              )}
             </div>
           </div>
-          {prev && (
-            <div className={`stat${status === 'high' ? ' stat--alarm' : ''}`}>
+          {!isTextOnly && prev && (
+            <div className={`stat${status !== 'ok' ? ` stat--${status}` : ''}`}>
               <div className="stat-label">Δ vs previous</div>
-              <div className={`stat-value ${status === 'high' ? 'stat-value--alarm' : status === 'ok' ? 'delta--ok' : `delta--${d >= 0 ? 'up' : 'down'}`}`}>
+              <div className={`stat-value ${status !== 'ok' ? `stat-value--${status}` : 'delta--ok'}`}>
                 <span className="num">{d >= 0 ? '+' : ''}{d.toFixed(1)}%</span>
               </div>
               <div className="stat-sub">from {fmtNum(prev.value)} {marker.unit}</div>
             </div>
           )}
-          <div className="stat">
-            <div className="stat-label">Min</div>
-            <div className="stat-value"><span className="num">{fmtNum(min)}</span></div>
-            <div className="stat-sub">of {marker.values.length} readings</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Average</div>
-            <div className="stat-value"><span className="num">{fmtNum(avg)}</span></div>
-            <div className="stat-sub">reference {marker.refLow}–{marker.refHigh}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Max</div>
-            <div className="stat-value"><span className="num">{fmtNum(max)}</span></div>
-            <div className="stat-sub">&nbsp;</div>
-          </div>
+          {!isTextOnly && (
+            <>
+              <div className="stat">
+                <div className="stat-label">Min</div>
+                <div className="stat-value"><span className="num">{fmtNum(min)}</span></div>
+                <div className="stat-sub">of {marker.values.length} readings</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">Average</div>
+                <div className="stat-value"><span className="num">{fmtNum(avg)}</span></div>
+                <div className="stat-sub">reference {fmtRef(marker.refLow, marker.refHigh)}</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">Max</div>
+                <div className="stat-value"><span className="num">{fmtNum(max)}</span></div>
+                <div className="stat-sub">&nbsp;</div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="chart-area">
@@ -147,13 +175,13 @@ export function DetailModal({ marker, markers, categories, annotations, onClose,
           <div className="section-label">All readings</div>
           <div className="readings-grid">
             {marker.values.slice().reverse().map((v, i) => {
-              const s = rangeStatus(v.value, marker.refLow, marker.refHigh);
+              const s = v.flagged !== undefined ? (v.flagged ? 'high' : 'ok') : rangeStatus(v.value, marker.refLow, marker.refHigh);
               return (
                 <div key={i} className="reading">
                   <span className={`status-dot status-${s}`} />
                   <span className="r-date">{fmtDate(v.date, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   <span className="r-val">
-                    {fmtNum(v.value)} <span className="unit">{marker.unit}</span>
+                    {isTextOnly ? v.label : fmtNum(v.value)} <span className="unit">{marker.unit}</span>
                   </span>
                 </div>
               );

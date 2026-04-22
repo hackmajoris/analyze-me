@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import type { Marker, Annotation, ChartType } from '../types';
+import type { Marker, Annotation, ChartType, RangeStatus } from '../types';
 import { rangeStatus, statusColor, fmtDate } from '../lib/chartUtils';
 
 interface LineChartProps {
@@ -38,8 +38,8 @@ export function LineChart({
 
   const { values, refLow, refHigh } = marker;
   const vals = values.map(v => v.value);
-  const dataMin = Math.min(refLow, ...vals);
-  const dataMax = Math.max(refHigh, ...vals);
+  const dataMin = Math.min(refLow ?? Math.min(...vals), ...vals);
+  const dataMax = Math.max(refHigh ?? Math.max(...vals), ...vals);
   const span = dataMax - dataMin || 1;
   const min = dataMin - span * 0.12;
   const max = dataMax + span * 0.12;
@@ -48,12 +48,15 @@ export function LineChart({
   const y = (v: number) => pad.t + h - ((v - min) / (max - min)) * h;
 
   // Build compare scale once
+  let cx: ((i: number) => number) = x;
   let cy: ((v: number) => number) | null = null;
   let cLo = 0, cHi = 1;
   if (compareMarker) {
+    const cLen = compareMarker.values.length;
+    cx = (i: number) => pad.l + (cLen === 1 ? 0.5 : i / (cLen - 1)) * w;
     const cv = compareMarker.values.map(p => p.value);
-    const cMin = Math.min(compareMarker.refLow, ...cv);
-    const cMax = Math.max(compareMarker.refHigh, ...cv);
+    const cMin = Math.min(compareMarker.refLow ?? Math.min(...cv), ...cv);
+    const cMax = Math.max(compareMarker.refHigh ?? Math.max(...cv), ...cv);
     const cSpan = cMax - cMin || 1;
     cLo = cMin - cSpan * 0.12;
     cHi = cMax + cSpan * 0.12;
@@ -67,7 +70,7 @@ export function LineChart({
 
   const comparePath = compareMarker && cy
     ? compareMarker.values
-        .map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${cy!(v.value).toFixed(1)}`)
+        .map((v, i) => `${i === 0 ? 'M' : 'L'} ${cx(i).toFixed(1)} ${cy!(v.value).toFixed(1)}`)
         .join(' ')
     : null;
 
@@ -101,21 +104,29 @@ export function LineChart({
         ))}
 
         {/* reference band */}
-        {showBand && (
+        {showBand && (refLow !== null || refHigh !== null) && (
           <g>
-            <rect x={pad.l} y={y(refHigh)} width={w} height={Math.max(1, y(refLow) - y(refHigh))}
+            <rect x={pad.l} y={refHigh !== null ? y(refHigh) : pad.t}
+              width={w} height={Math.max(1, (refLow !== null ? y(refLow) : pad.t + h) - (refHigh !== null ? y(refHigh) : pad.t))}
               fill="currentColor" opacity="0.08" />
-            <line x1={pad.l} x2={pad.l + w} y1={y(refLow)} y2={y(refLow)}
-              stroke="currentColor" strokeDasharray="3 3" opacity="0.35" />
-            <line x1={pad.l} x2={pad.l + w} y1={y(refHigh)} y2={y(refHigh)}
-              stroke="currentColor" strokeDasharray="3 3" opacity="0.35" />
-            {/* reference band labels */}
-            <text x={pad.l - 8} y={y(refLow) + 4} textAnchor="end" fontSize="12" fontWeight="600" fill="currentColor" opacity="0.9" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {refLow.toFixed(refLow < 10 ? 1 : 0)}
-            </text>
-            <text x={pad.l - 8} y={y(refHigh) + 4} textAnchor="end" fontSize="12" fontWeight="600" fill="currentColor" opacity="0.9" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {refHigh.toFixed(refHigh < 10 ? 1 : 0)}
-            </text>
+            {refLow !== null && (
+              <line x1={pad.l} x2={pad.l + w} y1={y(refLow)} y2={y(refLow)}
+                stroke="currentColor" strokeDasharray="3 3" opacity="0.35" />
+            )}
+            {refHigh !== null && (
+              <line x1={pad.l} x2={pad.l + w} y1={y(refHigh)} y2={y(refHigh)}
+                stroke="currentColor" strokeDasharray="3 3" opacity="0.35" />
+            )}
+            {refLow !== null && (
+              <text x={pad.l - 8} y={y(refLow) + 4} textAnchor="end" fontSize="12" fontWeight="600" fill="currentColor" opacity="0.9" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {refLow.toFixed(refLow < 10 ? 1 : 0)}
+              </text>
+            )}
+            {refHigh !== null && (
+              <text x={pad.l - 8} y={y(refHigh) + 4} textAnchor="end" fontSize="12" fontWeight="600" fill="currentColor" opacity="0.9" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {refHigh.toFixed(refHigh < 10 ? 1 : 0)}
+              </text>
+            )}
           </g>
         )}
 
@@ -138,7 +149,8 @@ export function LineChart({
           values.map((v, i) => {
             const barW = Math.max(3, w / values.length - 6);
             const barH = Math.max(1, pad.t + h - y(v.value));
-            const s = rangeStatus(v.value, refLow, refHigh);
+            // For text-only results, use the flagged status; for numeric, use range comparison
+            const s = v.flagged !== undefined ? (v.flagged ? 'high' : 'ok') : rangeStatus(v.value, refLow, refHigh);
             return (
               <rect key={i} x={x(i) - barW / 2} y={y(v.value)} width={barW} height={barH}
                 fill={statusColor(s)} opacity="0.85" rx="2" />
@@ -146,14 +158,24 @@ export function LineChart({
           })
         ) : chartType !== 'dots' ? (
           <>
-            <path d={areaPath} fill="currentColor" opacity="0.1" />
-            <path d={path} fill="none" stroke="currentColor" strokeWidth="2"
-              strokeLinejoin="round" strokeLinecap="round" />
+            <path d={areaPath} fill="var(--line)" opacity="0.06" />
+            {values.map((v, i) => {
+              if (i === 0) return null;
+              const s = (refLow === null && refHigh === null)
+                ? (v.flagged ? 'high' : 'ok') as RangeStatus
+                : rangeStatus(v.value, refLow, refHigh);
+              return (
+                <line key={`line-${i}`} x1={x(i - 1)} y1={y(values[i - 1].value)}
+                  x2={x(i)} y2={y(v.value)} stroke={statusColor(s)} strokeWidth="2"
+                  strokeLinejoin="round" strokeLinecap="round" />
+              );
+            })}
           </>
         ) : null}
 
         {chartType !== 'bar' && values.map((v, i) => {
-          const s = rangeStatus(v.value, refLow, refHigh);
+          // For text-only results, use the flagged status; for numeric, use range comparison
+          const s = v.flagged !== undefined ? (v.flagged ? 'high' : 'ok') : rangeStatus(v.value, refLow, refHigh);
           return (
             <circle key={i} cx={x(i)} cy={y(v.value)} r={hoverIdx === i ? 5.5 : 3.5}
               fill={statusColor(s)} stroke="var(--bg)" strokeWidth="1.5" />
@@ -166,7 +188,7 @@ export function LineChart({
             <path d={comparePath} fill="none" stroke="currentColor" strokeWidth="1.6"
               strokeDasharray="4 3" strokeLinejoin="round" strokeLinecap="round" opacity="0.85" />
             {compareMarker.values.map((v, i) => (
-              <circle key={i} cx={x(i)} cy={cy!(v.value)} r="2.8"
+              <circle key={i} cx={cx(i)} cy={cy!(v.value)} r="2.8"
                 fill="currentColor" stroke="var(--bg)" strokeWidth="1" opacity="0.9" />
             ))}
             {/* right axis */}
@@ -223,10 +245,16 @@ export function LineChart({
               {values[hoverIdx].label || values[hoverIdx].value} <span className="tt-unit">{marker.unit}</span>
             </span>
           </div>
+          {values[hoverIdx].expectedText && (
+            <div className="tt-row" style={{ fontSize: '11px', opacity: 0.8 }}>
+              <span style={{ marginRight: '4px' }}>Expected:</span>
+              <span>{values[hoverIdx].expectedText}</span>
+            </div>
+          )}
           {values[hoverIdx].lab && (
             <div className="tt-lab">{values[hoverIdx].lab}</div>
           )}
-          {compareMarker && (
+          {compareMarker && hoverIdx < compareMarker.values.length && (
             <div className="tt-row" style={{ color: `var(--cat-${compareMarker.category})` }}>
               <span className="tt-dot" style={{ background: 'currentColor' }} />
               <span className="tt-name">{compareMarker.short}</span>

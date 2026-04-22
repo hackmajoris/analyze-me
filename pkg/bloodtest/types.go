@@ -2,12 +2,14 @@ package bloodtest
 
 // DataPoint represents a single measurement at a point in time
 type DataPoint struct {
-	Date    string  `json:"date"`
-	Value   float64 `json:"value"`
-	Lab     string  `json:"lab"`
-	RefLow  float64 `json:"refLow"`
-	RefHigh float64 `json:"refHigh"`
-	Label   string  `json:"label,omitempty"` // for qualitative results e.g. "<75"
+	Date         string   `json:"date"`
+	Value        float64  `json:"value"`
+	Lab          string   `json:"lab"`
+	RefLow       *float64 `json:"refLow"`
+	RefHigh      *float64 `json:"refHigh"`
+	Label        string   `json:"label,omitempty"`        // for qualitative results e.g. "<75"
+	ExpectedText string   `json:"expectedText,omitempty"` // for text results e.g. "Negativ"
+	Flagged      bool     `json:"flagged"`                // whether result is outside normal range
 }
 
 // Marker represents a lab test marker with historical data
@@ -17,8 +19,8 @@ type Marker struct {
 	Short       string      `json:"short"`
 	Unit        string      `json:"unit"`
 	Category    string      `json:"category"`
-	RefLow      float64     `json:"refLow"`
-	RefHigh     float64     `json:"refHigh"`
+	RefLow      *float64    `json:"refLow"`
+	RefHigh     *float64    `json:"refHigh"`
 	Description string      `json:"description"`
 	Values      []DataPoint `json:"values"`
 }

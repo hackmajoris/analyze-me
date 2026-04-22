@@ -6,6 +6,14 @@ import (
 	"sort"
 )
 
+func nullFloat(n sql.NullFloat64) *float64 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Float64
+	return &v
+}
+
 // Store provides data access to blood test records
 type Store struct {
 	db *sql.DB
@@ -27,7 +35,8 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 			ref_min,
 			ref_max
 		FROM test_results
-		WHERE result_numeric IS NOT NULL
+		WHERE (result_numeric IS NOT NULL OR result_text IS NOT NULL)
+		  AND test_name NOT IN ('Sex', 'Centrul Medical Unirea SRL')
 		ORDER BY category, test_name
 	`
 
@@ -60,8 +69,8 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 			Short:    code.String,
 			Unit:     unit.String,
 			Category: category.String,
-			RefLow:   refMin.Float64,
-			RefHigh:  refMax.Float64,
+			RefLow:   nullFloat(refMin),
+			RefHigh:  nullFloat(refMax),
 			Values:   []DataPoint{},
 		}
 		// Only add to markers slice if this is the first time we've seen this test code
@@ -81,13 +90,16 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 			tr.test_code,
 			r.collection_date,
 			r.lab_name,
-			AVG(tr.result_numeric) as avg_value,
+			COALESCE(AVG(tr.result_numeric), 0) as avg_value,
 			AVG(tr.ref_min) as avg_ref_min,
 			AVG(tr.ref_max) as avg_ref_max,
-			MAX(tr.result_text) as result_text
+			MAX(tr.result_text) as result_text,
+			MAX(tr.expected_text) as expected_text,
+			MAX(CASE WHEN tr.result_numeric IS NOT NULL THEN 1 ELSE 0 END) as has_numeric,
+			MAX(tr.is_flagged) as is_flagged
 		FROM test_results tr
 		JOIN reports r ON tr.report_id = r.id
-		WHERE tr.result_numeric IS NOT NULL
+		WHERE tr.result_numeric IS NOT NULL OR tr.result_text IS NOT NULL
 		GROUP BY tr.test_code, r.id, r.collection_date, r.lab_name
 		ORDER BY tr.test_code, r.collection_date
 	`
@@ -99,11 +111,12 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 	defer valueRows.Close()
 
 	for valueRows.Next() {
-		var code, date, lab, resultText sql.NullString
+		var code, date, lab, resultText, expectedText sql.NullString
 		var value float64
+		var hasNumeric, isFlagged int
 		var refMin, refMax sql.NullFloat64
 
-		if err := valueRows.Scan(&code, &date, &lab, &value, &refMin, &refMax, &resultText); err != nil {
+		if err := valueRows.Scan(&code, &date, &lab, &value, &refMin, &refMax, &resultText, &expectedText, &hasNumeric, &isFlagged); err != nil {
 			return nil, fmt.Errorf("scan value: %w", err)
 		}
 
@@ -112,13 +125,20 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 		}
 
 		if marker, ok := testCodeMap[code.String]; ok {
+			// Only include numeric value if we have actual numeric data
+			var dataValue float64
+			if hasNumeric == 1 {
+				dataValue = value
+			}
 			marker.Values = append(marker.Values, DataPoint{
-				Date:    date.String,
-				Value:   value,
-				Lab:     lab.String,
-				RefLow:  refMin.Float64,
-				RefHigh: refMax.Float64,
-				Label:   resultText.String,
+				Date:         date.String,
+				Value:        dataValue,
+				Lab:          lab.String,
+				RefLow:       nullFloat(refMin),
+				RefHigh:      nullFloat(refMax),
+				Label:        resultText.String,
+				ExpectedText: expectedText.String,
+				Flagged:      isFlagged == 1,
 			})
 		}
 	}

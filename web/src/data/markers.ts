@@ -70,7 +70,7 @@ export const MARKERS: Marker[] = [
     unit: 'mg/dL',
     category: 'lipids',
     refLow: 40,
-    refHigh: 80,
+    refHigh: null,
     description: 'High-density lipoprotein — "good" cholesterol.',
     values: series(48, (v, i) => v + Math.sin(i * 0.8) * 2.5 + 0.6 * i),
   },

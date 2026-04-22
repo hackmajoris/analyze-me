@@ -1,8 +1,15 @@
 import { useState, useMemo } from 'react';
-import type { ChartType } from '../types';
+import type { ChartType, Marker } from '../types';
 import { useMarkerData } from '../hooks/useMarkerData';
-import { rangeStatus, fmtNum, fmtDate, deltaPct } from '../lib/chartUtils';
+import { rangeStatus, fmtNum, fmtDate, deltaPct, fmtRef } from '../lib/chartUtils';
 import { LineChart } from '../components/LineChart';
+
+function isOutOfRange(m: Marker): boolean {
+  const latest = m.values[m.values.length - 1];
+  if (!latest) return false;
+  if (latest.flagged !== undefined) return latest.flagged;
+  return rangeStatus(latest.value, m.refLow, m.refHigh) === 'high';
+}
 
 interface TimelineViewProps {
   showBand: boolean;
@@ -14,6 +21,9 @@ export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewP
   const { markers, categories, annotations, loading, error } = useMarkerData(selectedLab);
   const [selectedId, setSelectedId] = useState('');
   const [compareId, setCompareId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'out-of-range'>('all');
+
+  const outOfRangeMarkers = useMemo(() => markers.filter(isOutOfRange), [markers]);
 
   const byCat = useMemo(() => {
     const g: Record<string, typeof markers> = {};
@@ -59,54 +69,113 @@ export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewP
         <div className="sidebar-head">
           <h1 className="view-title">Markers</h1>
           <div className="view-sub">{markers.length} · {Object.keys(categories).length} categories</div>
-        </div>
-        {Object.entries(byCat).map(([catId, list]) => (
-          <div key={catId} className="sidebar-group">
-            <div className="sidebar-group-head" style={{ color: categories[catId]?.color }}>
-              <span className="sidebar-swatch" style={{ background: categories[catId]?.color }} />
-              {categories[catId]?.label}
-            </div>
-            <ul className="sidebar-list">
-              {list.map(m => {
-                const lv = m.values[m.values.length - 1];
-                const s = rangeStatus(lv.value, m.refLow, m.refHigh);
-                const isSel = m.id === selectedId;
-                const isCmp = m.id === compareId;
-                return (
-                  <li
-                    key={m.id}
-                    className={`sidebar-item ${isSel ? 'selected' : ''} ${isCmp ? 'compare' : ''}`}
-                    style={{ '--cat-color': categories[m.category]?.color } as React.CSSProperties}
-                    onClick={() => setSelectedId(m.id)}
-                  >
-                    <span className={`status-dot status-${s}`} />
-                    <span className="sb-name">{m.name}</span>
-                    <span className="sb-val">
-                      {fmtNum(lv.value)} <span className="unit">{m.unit}</span>
-                    </span>
-                    <button
-                      className="cmp-btn"
-                      title="Compare on chart"
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (isCmp) {
-                          setCompareId(null);
-                        } else {
-                          setCompareId(m.id);
-                          if (m.id === selectedId) {
-                            setSelectedId(markers.find(x => x.id !== m.id)?.id || '');
-                          }
-                        }
-                      }}
-                    >
-                      {isCmp ? '×' : '+'}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+          <div className="sidebar-filters">
+            <button
+              className={`chip ${filter === 'all' ? 'active' : ''}`}
+              onClick={() => setFilter('all')}
+            >
+              All
+            </button>
+            <button
+              className={`chip chip--alarm ${filter === 'out-of-range' ? 'active' : ''}`}
+              onClick={() => setFilter('out-of-range')}
+            >
+              Out of range
+              {outOfRangeMarkers.length > 0 && (
+                <span className="chip-badge">{outOfRangeMarkers.length}</span>
+              )}
+            </button>
           </div>
-        ))}
+        </div>
+        {filter === 'out-of-range' ? (
+          <ul className="sidebar-list">
+            {outOfRangeMarkers.map(m => {
+              const lv = m.values[m.values.length - 1];
+              const s = lv.flagged ? 'high' : rangeStatus(lv.value, m.refLow, m.refHigh);
+              const isSel = m.id === selectedId;
+              const isCmp = m.id === compareId;
+              return (
+                <li
+                  key={m.id}
+                  className={`sidebar-item ${isSel ? 'selected' : ''} ${isCmp ? 'compare' : ''}`}
+                  style={{ '--cat-color': 'oklch(0.62 0.18 28)' } as React.CSSProperties}
+                  onClick={() => setSelectedId(m.id)}
+                >
+                  <span className={`status-dot status-${s}`} />
+                  <span className="sb-name">{m.name}</span>
+                  <span className="sb-val">
+                    {fmtNum(lv.value)} <span className="unit">{m.unit}</span>
+                  </span>
+                  <button
+                    className="cmp-btn"
+                    title="Compare on chart"
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (isCmp) {
+                        setCompareId(null);
+                      } else {
+                        setCompareId(m.id);
+                        if (m.id === selectedId) {
+                          setSelectedId(markers.find(x => x.id !== m.id)?.id || '');
+                        }
+                      }
+                    }}
+                  >
+                    {isCmp ? '×' : '+'}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          Object.entries(byCat).map(([catId, list]) => (
+            <div key={catId} className="sidebar-group">
+              <div className="sidebar-group-head" style={{ color: categories[catId]?.color }}>
+                <span className="sidebar-swatch" style={{ background: categories[catId]?.color }} />
+                {categories[catId]?.label}
+              </div>
+              <ul className="sidebar-list">
+                {list.map(m => {
+                  const lv = m.values[m.values.length - 1];
+                  const s = rangeStatus(lv.value, m.refLow, m.refHigh);
+                  const isSel = m.id === selectedId;
+                  const isCmp = m.id === compareId;
+                  return (
+                    <li
+                      key={m.id}
+                      className={`sidebar-item ${isSel ? 'selected' : ''} ${isCmp ? 'compare' : ''}`}
+                      style={{ '--cat-color': categories[m.category]?.color } as React.CSSProperties}
+                      onClick={() => setSelectedId(m.id)}
+                    >
+                      <span className={`status-dot status-${s}`} />
+                      <span className="sb-name">{m.name}</span>
+                      <span className="sb-val">
+                        {fmtNum(lv.value)} <span className="unit">{m.unit}</span>
+                      </span>
+                      <button
+                        className="cmp-btn"
+                        title="Compare on chart"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (isCmp) {
+                            setCompareId(null);
+                          } else {
+                            setCompareId(m.id);
+                            if (m.id === selectedId) {
+                              setSelectedId(markers.find(x => x.id !== m.id)?.id || '');
+                            }
+                          }
+                        }}
+                      >
+                        {isCmp ? '×' : '+'}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))
+        )}
       </aside>
 
       <main
@@ -153,7 +222,7 @@ export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewP
           <div className="stat">
             <div className="stat-label">Reference</div>
             <div className="stat-value ref-val">
-              <span className="num">{selected.refLow}–{selected.refHigh}</span>
+              <span className="num">{fmtRef(selected.refLow, selected.refHigh)}</span>
             </div>
           </div>
         </div>

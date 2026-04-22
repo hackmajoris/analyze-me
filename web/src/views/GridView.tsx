@@ -3,6 +3,8 @@ import type { Marker, Density, ChartType } from '../types';
 import { useMarkerData } from '../hooks/useMarkerData';
 import { SummaryCard } from '../components/SummaryCard';
 import { DetailModal } from '../components/DetailModal';
+import { rangeStatus } from '../lib/chartUtils';
+import { exportOutOfRange } from '../lib/exportMarkdown';
 
 interface GridViewProps {
   density: Density;
@@ -11,19 +13,31 @@ interface GridViewProps {
   selectedLab: string;
 }
 
+function isOutOfRange(m: Marker): boolean {
+  const latest = m.values[m.values.length - 1];
+  if (!latest) return false;
+  if (latest.flagged !== undefined) return latest.flagged;
+  return rangeStatus(latest.value, m.refLow, m.refHigh) === 'high';
+}
+
 export function GridView({ density, showBand, chartType, selectedLab }: GridViewProps) {
   const { markers, categories, loading, error } = useMarkerData(selectedLab);
   const [open, setOpen] = useState<Marker | null>(null);
   const [filter, setFilter] = useState('all');
 
+  const outOfRangeMarkers = useMemo(() => markers.filter(isOutOfRange), [markers]);
+
   const grouped = useMemo(() => {
+    if (filter === 'out-of-range') {
+      return { 'out-of-range': outOfRangeMarkers };
+    }
     const g: Record<string, Marker[]> = {};
     markers.forEach(m => {
       if (filter !== 'all' && m.category !== filter) return;
       (g[m.category] = g[m.category] ?? []).push(m);
     });
     return g;
-  }, [filter, markers]);
+  }, [filter, markers, outOfRangeMarkers]);
 
   if (loading) {
     return <div className="view"><div className="view-head"><h1 className="view-title">Loading...</h1></div></div>;
@@ -44,12 +58,31 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
           <h1 className="view-title">Blood Analysis</h1>
           <div className="view-sub">{markers.length} markers · {Object.keys(categories).length} categories · {dateRange}</div>
         </div>
-        <div className="filter-chips">
+        <div className="view-head-actions">
+          {filter === 'out-of-range' && outOfRangeMarkers.length > 0 && (
+            <button
+              className="export-btn"
+              onClick={() => exportOutOfRange(outOfRangeMarkers, categories)}
+              title="Export out-of-range markers as Markdown"
+            >
+              ↓ Export .md
+            </button>
+          )}
+          <div className="filter-chips">
           <button
             className={`chip ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
           >
             All
+          </button>
+          <button
+            className={`chip chip--alarm ${filter === 'out-of-range' ? 'active' : ''}`}
+            onClick={() => setFilter('out-of-range')}
+          >
+            Out of range
+            {outOfRangeMarkers.length > 0 && (
+              <span className="chip-badge">{outOfRangeMarkers.length}</span>
+            )}
           </button>
           {Object.entries(categories).map(([id, c]) => (
             <button
@@ -62,18 +95,19 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
               {c.label}
             </button>
           ))}
+          </div>
         </div>
       </div>
 
-      {Object.entries(grouped).map(([catId, groupMarkers]) => (
-        <section key={catId} className="group">
+      {filter === 'out-of-range' ? (
+        <section className="group">
           <div className="group-head">
-            <div className="group-swatch" style={{ background: categories[catId]?.color }} />
-            <h2 className="group-title">{categories[catId]?.label}</h2>
-            <div className="group-count">{groupMarkers.length} markers</div>
+            <div className="group-swatch" style={{ background: 'oklch(0.62 0.18 28)' }} />
+            <h2 className="group-title">Out of range</h2>
+            <div className="group-count">{outOfRangeMarkers.length} markers</div>
           </div>
           <div className="grid">
-            {groupMarkers.map(m => (
+            {outOfRangeMarkers.map(m => (
               <SummaryCard
                 key={m.id}
                 marker={m}
@@ -86,7 +120,30 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
             ))}
           </div>
         </section>
-      ))}
+      ) : (
+        Object.entries(grouped).map(([catId, groupMarkers]) => (
+          <section key={catId} className="group">
+            <div className="group-head">
+              <div className="group-swatch" style={{ background: categories[catId]?.color }} />
+              <h2 className="group-title">{categories[catId]?.label}</h2>
+              <div className="group-count">{groupMarkers.length} markers</div>
+            </div>
+            <div className="grid">
+              {groupMarkers.map(m => (
+                <SummaryCard
+                  key={m.id}
+                  marker={m}
+                  categories={categories}
+                  density={density}
+                  showBand={showBand}
+                  chartType={chartType}
+                  onOpen={setOpen}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
 
       {open && (
         <DetailModal

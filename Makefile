@@ -1,4 +1,4 @@
-.PHONY: build serve test lint fmt clean generate web-dev web-build
+.PHONY: build serve dev test lint fmt clean generate web-dev web-build
 
 APP := server
 BIN := .bin/$(APP)
@@ -24,6 +24,9 @@ clean:
 
 generate:
 	go generate ./...
+
+dev: build
+	$(BIN) & cd web && npm run dev
 
 web-dev:
 	cd web && npm run dev

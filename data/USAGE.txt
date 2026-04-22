@@ -1,0 +1,26 @@
+# extract.py Usage
+
+The extract.py script now supports processing both single PDF files and entire folders.
+
+## Usage Examples:
+
+1. Process a single PDF file:
+   python3 extract.py all.pdf
+   python3 extract.py path/to/file.pdf
+
+2. Process all PDFs in a folder:
+   python3 extract.py .
+   python3 extract.py /path/to/folder
+
+3. Dry run (preview without saving to database):
+   python3 extract.py all.pdf --dry-run
+   python3 extract.py . --dry-run
+
+4. Default (if no arguments, processes all.pdf):
+   python3 extract.py
+
+## Output:
+- Processes all PDF files and creates/updates blood_tests.db
+- Groups results by report format (CRTSC, RM, Synevo, Bioclinica)
+- Accumulates all results into the same database
+- Reports total number of reports and results extracted

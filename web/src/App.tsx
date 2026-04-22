@@ -10,7 +10,7 @@ const DEFAULTS = {
   density: 'compact' as Density,
   chartType: 'line' as ChartType,
   showBand: true,
-  dark: false,
+  dark: true,
 };
 
 export function App() {

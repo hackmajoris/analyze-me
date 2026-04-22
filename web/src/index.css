@@ -143,6 +143,32 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
   width: 8px; height: 8px; border-radius: 50%; background: var(--chip-color, currentColor);
 }
 
+.chip--alarm { color: oklch(0.62 0.18 28); border-color: oklch(0.62 0.18 28 / 0.35); }
+.chip--alarm:hover { border-color: oklch(0.62 0.18 28); color: oklch(0.62 0.18 28); }
+.chip--alarm.active { background: oklch(0.96 0.03 28); border-color: oklch(0.62 0.18 28); color: oklch(0.62 0.18 28); }
+
+[data-theme="dark"] .chip--alarm.active { background: oklch(0.28 0.06 28); }
+
+.chip-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; background: oklch(0.62 0.18 28); color: #fff;
+}
+
+.view-head-actions {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+
+.export-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  background: oklch(0.62 0.18 28); color: #fff;
+  border: none; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.export-btn:hover { opacity: 0.85; }
+
 /* ---------- Group ---------- */
 .group { margin-bottom: 44px; }
 
@@ -291,12 +317,12 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
 
 .stat { padding: 14px 16px; background: var(--panel); display: flex; flex-direction: column; gap: 4px; }
 .stat--hero { background: var(--tint, var(--panel)); }
-:root[data-theme="dark"] .stat--hero:not(.stat--alarm) {
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm):not(.stat--high):not(.stat--warn) {
   background: oklch(0.42 0.15 155) !important;
 }
-:root[data-theme="dark"] .stat--hero:not(.stat--alarm) .stat-label,
-:root[data-theme="dark"] .stat--hero:not(.stat--alarm) .stat-value,
-:root[data-theme="dark"] .stat--hero:not(.stat--alarm) .stat-sub {
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm):not(.stat--high):not(.stat--warn) .stat-label,
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm):not(.stat--high):not(.stat--warn) .stat-value,
+:root[data-theme="dark"] .stat--hero:not(.stat--alarm):not(.stat--high):not(.stat--warn) .stat-sub {
   color: white;
 }
 
@@ -320,11 +346,35 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
 .stat-value--alarm { color: oklch(0.52 0.18 28) !important; }
 .stat--alarm .stat-sub { color: oklch(0.55 0.14 28); }
 
+.stat--high { background: oklch(0.96 0.04 28) !important; }
+.stat--high .stat-label { color: oklch(0.5 0.15 28); }
+.stat--high .stat-value,
+.stat-value--high { color: oklch(0.52 0.18 28) !important; }
+.stat--high .stat-sub { color: oklch(0.55 0.14 28); }
+
+.stat--warn { background: oklch(0.96 0.04 75) !important; }
+.stat--warn .stat-label { color: oklch(0.52 0.14 75); }
+.stat--warn .stat-value,
+.stat-value--warn { color: oklch(0.62 0.14 75) !important; }
+.stat--warn .stat-sub { color: oklch(0.62 0.14 75); }
+
 :root[data-theme="dark"] .stat--alarm { background: oklch(0.28 0.07 28) !important; }
 :root[data-theme="dark"] .stat--alarm .stat-label { color: oklch(0.82 0.13 28); }
 :root[data-theme="dark"] .stat--alarm .stat-value,
 :root[data-theme="dark"] .stat-value--alarm { color: oklch(0.88 0.15 28) !important; }
 :root[data-theme="dark"] .stat--alarm .stat-sub { color: oklch(0.78 0.12 28); }
+
+:root[data-theme="dark"] .stat--high { background: oklch(0.28 0.07 28) !important; }
+:root[data-theme="dark"] .stat--high .stat-label { color: oklch(0.82 0.13 28); }
+:root[data-theme="dark"] .stat--high .stat-value,
+:root[data-theme="dark"] .stat-value--high { color: oklch(0.88 0.15 28) !important; }
+:root[data-theme="dark"] .stat--high .stat-sub { color: oklch(0.78 0.12 28); }
+
+:root[data-theme="dark"] .stat--warn { background: oklch(0.28 0.07 75) !important; }
+:root[data-theme="dark"] .stat--warn .stat-label { color: oklch(0.82 0.13 75); }
+:root[data-theme="dark"] .stat--warn .stat-value,
+:root[data-theme="dark"] .stat-value--warn { color: oklch(0.88 0.15 75) !important; }
+:root[data-theme="dark"] .stat--warn .stat-sub { color: oklch(0.78 0.12 75); }
 
 .stat-sub { font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
 
@@ -455,6 +505,9 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
 .sidebar-head { margin-bottom: 18px; }
 .sidebar-head .view-title { font-size: 20px; }
 .sidebar-head .view-sub { font-size: 12px; margin-top: 2px; }
+
+.sidebar-filters { display: flex; gap: 6px; margin-top: 12px; }
+.sidebar-filters .chip { font-size: 11.5px; padding: 5px 11px; }
 
 .sidebar-group { margin-bottom: 16px; }
 

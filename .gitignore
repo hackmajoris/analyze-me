@@ -3,3 +3,9 @@ web/node_modules/
 web/dist/
 *.env
 .idea
+pkg/web/dist
+data/pdfs
+data/blood_tests.db
+data/blood_tests.db.bk
+data/__pycache__/
+.DS_Store
