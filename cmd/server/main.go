@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hackmajoris/analyze-me/pkg/bloodtest"
 	"github.com/hackmajoris/analyze-me/pkg/upload"
 	"github.com/hackmajoris/analyze-me/pkg/web"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
 func main() {
@@ -44,7 +47,17 @@ func run(args []string, out io.Writer) error {
 			return fmt.Errorf("create db dir: %w", err)
 		}
 	}
-	db, err := sql.Open("sqlite3", dbPath)
+
+	// DB_KEY enables SQLCipher AES-256 encryption. When set on an existing
+	// plaintext database, it is migrated in-place on first startup.
+	dbKey := os.Getenv("DB_KEY")
+	if dbKey != "" {
+		if err := maybeEncryptExisting(dbPath, dbKey, out); err != nil {
+			return fmt.Errorf("encrypt existing db: %w", err)
+		}
+	}
+
+	db, err := sql.Open("sqlite3", buildDSN(dbPath, dbKey))
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
@@ -60,7 +73,7 @@ func run(args []string, out io.Writer) error {
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		return fmt.Errorf("ping database: %w", err)
+		return fmt.Errorf("ping database (wrong DB_KEY?): %w", err)
 	}
 
 	// Auto-migrate: user-defined marker definitions
@@ -106,4 +119,95 @@ func run(args []string, out io.Writer) error {
 		return err
 	}
 	return http.Serve(listener, mux)
+}
+
+// buildDSN returns a SQLite/SQLCipher connection string. When key is empty the
+// database is opened without encryption (backwards-compatible).
+func buildDSN(dbPath, key string) string {
+	if key == "" {
+		return dbPath
+	}
+	return "file:" + url.PathEscape(dbPath) +
+		"?_pragma_key=" + url.QueryEscape(key) +
+		"&_pragma_cipher_page_size=4096"
+}
+
+// sqlLiteral escapes a string for use as a SQL single-quoted literal.
+func sqlLiteral(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
+}
+
+// maybeEncryptExisting detects a plaintext database at dbPath and migrates it
+// to SQLCipher in-place using sqlcipher_export(). The original file is
+// preserved as dbPath+".bak". It is a no-op when the file does not exist or is
+// already encrypted with the given key.
+func maybeEncryptExisting(dbPath, key string, out io.Writer) error {
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return nil // new database — will be created encrypted
+	}
+
+	// Probe: can we open the file with the key already?
+	enc, err := sql.Open("sqlite3", buildDSN(dbPath, key))
+	if err != nil {
+		return err
+	}
+	pingErr := enc.Ping()
+	enc.Close()
+	if pingErr == nil {
+		return nil // already encrypted with this key
+	}
+
+	// Probe: is it a valid plaintext SQLite file?
+	plain, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	if err := plain.Ping(); err != nil {
+		plain.Close()
+		return fmt.Errorf("db is neither plaintext nor decryptable with the given DB_KEY: %w", err)
+	}
+
+	fmt.Fprintln(out, "info: migrating database to encrypted format...")
+
+	encPath := dbPath + ".enc"
+
+	// Pin to one connection so ATTACH/export/DETACH share the same session.
+	plain.SetMaxOpenConns(1)
+	ctx := context.Background()
+	conn, err := plain.Conn(ctx)
+	if err != nil {
+		plain.Close()
+		return fmt.Errorf("acquire db connection: %w", err)
+	}
+
+	attachSQL := fmt.Sprintf(
+		`ATTACH DATABASE '%s' AS enc KEY '%s'`,
+		sqlLiteral(encPath), sqlLiteral(key),
+	)
+	_, err = conn.ExecContext(ctx, attachSQL)
+	if err == nil {
+		_, err = conn.ExecContext(ctx, `SELECT sqlcipher_export('enc')`)
+	}
+	if err == nil {
+		_, err = conn.ExecContext(ctx, `DETACH DATABASE enc`)
+	}
+	conn.Close()
+	plain.Close()
+
+	if err != nil {
+		_ = os.Remove(encPath)
+		return fmt.Errorf("export to encrypted db: %w", err)
+	}
+
+	if err = os.Rename(dbPath, dbPath+".bak"); err != nil {
+		_ = os.Remove(encPath)
+		return fmt.Errorf("backup original db: %w", err)
+	}
+	if err = os.Rename(encPath, dbPath); err != nil {
+		_ = os.Rename(dbPath+".bak", dbPath) // restore on failure
+		return fmt.Errorf("replace with encrypted db: %w", err)
+	}
+
+	fmt.Fprintf(out, "info: migration done; original backed up at %s.bak\n", dbPath)
+	return nil
 }

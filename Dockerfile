@@ -6,8 +6,11 @@ RUN npm ci
 COPY web/ .
 RUN npm run build
 
-# Stage 2: Build Go binary (CGO required for go-sqlite3)
+# Stage 2: Build Go binary (CGO required for go-sqlcipher)
 FROM golang:1.22 AS builder
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -19,7 +22,7 @@ RUN CGO_ENABLED=1 GOOS=linux \
 # Stage 3: Minimal runtime (glibc needed for CGO)
 FROM debian:bookworm-slim
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates libssl3 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/.bin/server ./server

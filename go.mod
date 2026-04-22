@@ -2,4 +2,4 @@ module github.com/hackmajoris/analyze-me
 
 go 1.22
 
-require github.com/mattn/go-sqlite3 v1.14.42
+require github.com/mutecomm/go-sqlcipher/v4 v4.4.2

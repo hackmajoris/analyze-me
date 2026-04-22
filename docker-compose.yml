@@ -7,3 +7,4 @@ services:
       - "${HOME}/Library/Mobile Documents/com~apple~CloudDocs/AnalyzeMe:/data"
     environment:
       DB_PATH: /data/blood_tests.db
+      DB_KEY: gabwi3-giKbus-xydfig
