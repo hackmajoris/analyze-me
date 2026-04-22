@@ -33,6 +33,17 @@ export interface Annotation {
   body: string;
 }
 
+export interface CreateMarkerRequest {
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
+  refMin: number | null;
+  refMax: number | null;
+  description: string;
+  valueType: 'numeric' | 'text';
+}
+
 export type RangeStatus = 'ok' | 'warn' | 'high';
 export type ChartType = 'line' | 'bar' | 'dots';
 export type Density = 'comfortable' | 'compact';

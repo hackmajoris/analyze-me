@@ -18,7 +18,8 @@ interface TimelineViewProps {
 }
 
 export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewProps) {
-  const { markers, categories, annotations, loading, error } = useMarkerData(selectedLab);
+  const { markers: allMarkers, categories, annotations, loading, error } = useMarkerData(selectedLab);
+  const markers = allMarkers.filter(m => m.values.length > 0);
   const [selectedId, setSelectedId] = useState('');
   const [compareId, setCompareId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'out-of-range'>('all');
@@ -135,7 +136,7 @@ export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewP
                 {categories[catId]?.label}
               </div>
               <ul className="sidebar-list">
-                {list.map(m => {
+                {list.filter(m => m.values.length > 0).map(m => {
                   const lv = m.values[m.values.length - 1];
                   const s = rangeStatus(lv.value, m.refLow, m.refHigh);
                   const isSel = m.id === selectedId;

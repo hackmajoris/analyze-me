@@ -26,6 +26,11 @@ export interface IMarkerService {
    * Fetch all annotations (timeline events)
    */
   getAnnotations(): Promise<Annotation[]>;
+
+  /**
+   * Delete a marker and all its readings
+   */
+  deleteMarker(code: string): Promise<void>;
 }
 
 export interface MarkerServiceOptions {

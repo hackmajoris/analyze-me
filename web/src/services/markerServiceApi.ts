@@ -18,4 +18,8 @@ export class MarkerServiceApi implements IMarkerService {
   async getAnnotations(): Promise<Annotation[]> {
     return api.get<Annotation[]>('/api/annotations');
   }
+
+  async deleteMarker(code: string): Promise<void> {
+    await api.delete(`/api/markers?code=${encodeURIComponent(code)}`);
+  }
 }

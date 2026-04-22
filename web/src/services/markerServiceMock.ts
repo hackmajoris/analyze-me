@@ -186,4 +186,8 @@ export class MarkerServiceMock implements IMarkerService {
   async getAnnotations(): Promise<Annotation[]> {
     return ANNOTATIONS;
   }
+
+  async deleteMarker(_code: string): Promise<void> {
+    // no-op in mock
+  }
 }

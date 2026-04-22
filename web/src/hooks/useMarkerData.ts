@@ -13,7 +13,7 @@ export function useLabs() {
   return labs;
 }
 
-export function useMarkerData(selectedLab = 'all') {
+export function useMarkerData(selectedLab = 'all', reloadSignal = 0) {
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -40,7 +40,7 @@ export function useMarkerData(selectedLab = 'all') {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [reloadSignal]); // re-fetch when reloadSignal changes
 
   // Apply lab filter client-side so we don't re-fetch on every switch
   const filteredMarkers = useMemo(() => {

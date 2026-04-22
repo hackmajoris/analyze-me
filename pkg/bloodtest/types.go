@@ -38,3 +38,26 @@ type Annotation struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
 }
+
+// AddReadingRequest holds fields for adding a manual data point to a marker
+type AddReadingRequest struct {
+	MarkerCode string   `json:"markerCode"`
+	Date       string   `json:"date"`      // YYYY-MM-DD
+	Value      *float64 `json:"value"`     // nil for text-only markers
+	ValueText  string   `json:"valueText"` // for qualitative results
+	Lab        string   `json:"lab"`
+	RefMin     *float64 `json:"refMin"`
+	RefMax     *float64 `json:"refMax"`
+}
+
+// CreateMarkerRequest holds fields for creating or updating a marker definition
+type CreateMarkerRequest struct {
+	Code        string   `json:"code"`
+	Name        string   `json:"name"`
+	Unit        string   `json:"unit"`
+	Category    string   `json:"category"`
+	RefMin      *float64 `json:"refMin"`
+	RefMax      *float64 `json:"refMax"`
+	Description string   `json:"description"`
+	ValueType   string   `json:"valueType"` // "numeric" or "text"
+}

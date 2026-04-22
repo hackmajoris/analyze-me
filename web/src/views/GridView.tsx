@@ -21,8 +21,10 @@ function isOutOfRange(m: Marker): boolean {
 }
 
 export function GridView({ density, showBand, chartType, selectedLab }: GridViewProps) {
-  const { markers, categories, loading, error } = useMarkerData(selectedLab);
-  const [open, setOpen] = useState<Marker | null>(null);
+  const [reloadSignal, setReloadSignal] = useState(0);
+  const { markers, categories, loading, error } = useMarkerData(selectedLab, reloadSignal);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = openId ? (markers.find(m => m.id === openId) ?? null) : null;
   const [filter, setFilter] = useState('all');
 
   const outOfRangeMarkers = useMemo(() => markers.filter(isOutOfRange), [markers]);
@@ -115,17 +117,21 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
                 density={density}
                 showBand={showBand}
                 chartType={chartType}
-                onOpen={setOpen}
+                onOpen={m => setOpenId(m.id)}
               />
             ))}
           </div>
         </section>
       ) : (
-        Object.entries(grouped).map(([catId, groupMarkers]) => (
-          <section key={catId} className="group">
+        Object.entries(grouped).map(([catId, groupMarkers]) => {
+          const catMeta = categories[catId];
+          const groupLabel = catMeta?.label ?? (catId || 'Custom');
+          const groupColor = catMeta?.color ?? 'oklch(0.65 0.12 195)';
+          return (
+          <section key={catId || '__custom__'} className="group">
             <div className="group-head">
-              <div className="group-swatch" style={{ background: categories[catId]?.color }} />
-              <h2 className="group-title">{categories[catId]?.label}</h2>
+              <div className="group-swatch" style={{ background: groupColor }} />
+              <h2 className="group-title">{groupLabel}</h2>
               <div className="group-count">{groupMarkers.length} markers</div>
             </div>
             <div className="grid">
@@ -137,12 +143,13 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
                   density={density}
                   showBand={showBand}
                   chartType={chartType}
-                  onOpen={setOpen}
+                  onOpen={m => setOpenId(m.id)}
                 />
               ))}
             </div>
           </section>
-        ))
+          );
+        })
       )}
 
       {open && (
@@ -151,9 +158,10 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
           markers={markers}
           categories={categories}
           annotations={[]}
-          onClose={() => setOpen(null)}
+          onClose={() => setOpenId(null)}
           showBand={showBand}
           chartType={chartType}
+          onReadingAdded={() => setReloadSignal(s => s + 1)}
         />
       )}
     </div>

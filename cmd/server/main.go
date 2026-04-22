@@ -36,6 +36,20 @@ func run(args []string, out io.Writer) error {
 		return fmt.Errorf("ping database: %w", err)
 	}
 
+	// Auto-migrate: user-defined marker definitions
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS markers (
+		code        TEXT PRIMARY KEY,
+		name        TEXT NOT NULL DEFAULT '',
+		unit        TEXT NOT NULL DEFAULT '',
+		category    TEXT NOT NULL DEFAULT '',
+		ref_min     REAL,
+		ref_max     REAL,
+		description TEXT NOT NULL DEFAULT '',
+		value_type  TEXT NOT NULL DEFAULT 'numeric'
+	)`); err != nil {
+		return fmt.Errorf("migrate markers table: %w", err)
+	}
+
 	// Wire up blood test service
 	store := bloodtest.NewStore(db)
 	handler := bloodtest.NewHandler(store)
@@ -43,10 +57,11 @@ func run(args []string, out io.Writer) error {
 
 	// Register API routes
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/markers", handler.HandleGetMarkers)
+	mux.HandleFunc("/api/markers", handler.HandleMarkers)
 	mux.HandleFunc("/api/categories", handler.HandleGetCategories)
 	mux.HandleFunc("/api/annotations", handler.HandleGetAnnotations)
 	mux.HandleFunc("/api/labs", handler.HandleGetLabs)
+	mux.HandleFunc("/api/readings", handler.HandleReadings)
 	mux.HandleFunc("/api/upload/zip", uploadHandler.HandleUploadZip)
 
 	// Serve web app (SPA fallback)

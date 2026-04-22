@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"time"
 )
 
 func nullFloat(n sql.NullFloat64) *float64 {
@@ -147,6 +148,48 @@ func (s *Store) GetMarkers() ([]Marker, error) {
 		return nil, fmt.Errorf("values rows error: %w", err)
 	}
 
+	// Third pass: merge custom marker definitions from the markers table
+	customRows, err := s.db.Query(`SELECT code, name, unit, category, ref_min, ref_max, description FROM markers`)
+	if err != nil {
+		return nil, fmt.Errorf("query custom markers: %w", err)
+	}
+	defer customRows.Close()
+
+	for customRows.Next() {
+		var code, name, unit, cat, desc string
+		var refMin, refMax sql.NullFloat64
+		if err := customRows.Scan(&code, &name, &unit, &cat, &refMin, &refMax, &desc); err != nil {
+			return nil, fmt.Errorf("scan custom marker: %w", err)
+		}
+		if marker, ok := testCodeMap[code]; ok {
+			// Override metadata with user-defined values
+			marker.Name = name
+			marker.Unit = unit
+			marker.Category = cat
+			marker.RefLow = nullFloat(refMin)
+			marker.RefHigh = nullFloat(refMax)
+			marker.Description = desc
+		} else {
+			// Marker defined but not yet in any test_results
+			nm := &Marker{
+				ID:          code,
+				Name:        name,
+				Short:       code,
+				Unit:        unit,
+				Category:    cat,
+				RefLow:      nullFloat(refMin),
+				RefHigh:     nullFloat(refMax),
+				Description: desc,
+				Values:      []DataPoint{},
+			}
+			markers = append(markers, *nm)
+			testCodeMap[code] = nm
+		}
+	}
+	if err := customRows.Err(); err != nil {
+		return nil, fmt.Errorf("custom markers rows error: %w", err)
+	}
+
 	// Convert map values to final slice and sort by date
 	result := []Marker{}
 	for _, m := range markers {
@@ -191,8 +234,13 @@ func (s *Store) GetCategories() (map[string]Category, error) {
 		},
 	}
 
-	// Query for actual categories in database and create entries if missing
-	query := `SELECT DISTINCT category FROM test_results ORDER BY category`
+	// Query for actual categories from both imported results and user-defined markers
+	query := `
+		SELECT DISTINCT category FROM test_results WHERE category != ''
+		UNION
+		SELECT DISTINCT category FROM markers WHERE category != ''
+		ORDER BY category
+	`
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("query categories: %w", err)
@@ -240,6 +288,178 @@ func (s *Store) GetLabs() ([]string, error) {
 		labs = append(labs, lab)
 	}
 	return labs, rows.Err()
+}
+
+// AddReading inserts a manual data point for a marker, creating a report row if needed.
+func (s *Store) AddReading(req AddReadingRequest) error {
+	// Look up marker metadata: prefer markers table, fall back to test_results
+	var testName, testUnit, testCategory string
+	err := s.db.QueryRow(
+		`SELECT COALESCE(name,''), COALESCE(unit,''), COALESCE(category,'') FROM markers WHERE code = ?`,
+		req.MarkerCode,
+	).Scan(&testName, &testUnit, &testCategory)
+	if err == sql.ErrNoRows {
+		err = s.db.QueryRow(
+			`SELECT COALESCE(test_name,''), COALESCE(unit,''), COALESCE(category,'')
+			 FROM test_results WHERE test_code = ? ORDER BY id DESC LIMIT 1`,
+			req.MarkerCode,
+		).Scan(&testName, &testUnit, &testCategory)
+		if err == sql.ErrNoRows {
+			testName = req.MarkerCode // last-resort fallback
+		} else if err != nil {
+			return fmt.Errorf("look up marker info: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("look up marker: %w", err)
+	}
+
+	// Find an existing report for this date+lab, or create one
+	var reportID int64
+	err = s.db.QueryRow(
+		`SELECT id FROM reports WHERE collection_date = ? AND lab_name = ?`,
+		req.Date, req.Lab,
+	).Scan(&reportID)
+	if err == sql.ErrNoRows {
+		sampleID := fmt.Sprintf("manual-%s-%s-%d", req.MarkerCode, req.Date, time.Now().UnixNano())
+		res, insErr := s.db.Exec(
+			`INSERT INTO reports (collection_date, lab_name, sample_id) VALUES (?, ?, ?)`,
+			req.Date, req.Lab, sampleID,
+		)
+		if insErr != nil {
+			return fmt.Errorf("create report: %w", insErr)
+		}
+		reportID, _ = res.LastInsertId()
+	} else if err != nil {
+		return fmt.Errorf("find report: %w", err)
+	}
+
+	// Inherit ref range from marker definition if not supplied
+	if req.RefMin == nil || req.RefMax == nil {
+		var rMin, rMax sql.NullFloat64
+		_ = s.db.QueryRow(`SELECT ref_min, ref_max FROM markers WHERE code = ?`, req.MarkerCode).Scan(&rMin, &rMax)
+		if !rMin.Valid {
+			_ = s.db.QueryRow(
+				`SELECT ref_min, ref_max FROM test_results WHERE test_code = ? AND ref_min IS NOT NULL ORDER BY id DESC LIMIT 1`,
+				req.MarkerCode,
+			).Scan(&rMin, &rMax)
+		}
+		if req.RefMin == nil && rMin.Valid {
+			v := rMin.Float64
+			req.RefMin = &v
+		}
+		if req.RefMax == nil && rMax.Valid {
+			v := rMax.Float64
+			req.RefMax = &v
+		}
+	}
+
+	isFlagged := 0
+	if req.Value != nil && req.RefMin != nil && req.RefMax != nil {
+		if *req.Value < *req.RefMin || *req.Value > *req.RefMax {
+			isFlagged = 1
+		}
+	}
+
+	var valueText *string
+	if req.ValueText != "" {
+		valueText = &req.ValueText
+	}
+
+	_, err = s.db.Exec(`
+		INSERT INTO test_results
+			(report_id, category, test_name, test_code, result_numeric, result_text, unit, ref_min, ref_max, is_flagged)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(report_id, test_name) DO UPDATE SET
+			result_numeric = excluded.result_numeric,
+			result_text    = excluded.result_text,
+			ref_min        = excluded.ref_min,
+			ref_max        = excluded.ref_max,
+			is_flagged     = excluded.is_flagged
+	`, reportID, testCategory, testName, req.MarkerCode,
+		req.Value, valueText, testUnit, req.RefMin, req.RefMax, isFlagged)
+	if err != nil {
+		return fmt.Errorf("upsert test result: %w", err)
+	}
+	return nil
+}
+
+// DeleteReading removes a specific test result identified by marker code, date, and lab.
+// If the parent report becomes empty after deletion it is also removed.
+func (s *Store) DeleteReading(markerCode, date, lab string) error {
+	var reportID int64
+	err := s.db.QueryRow(
+		`SELECT id FROM reports WHERE collection_date = ? AND lab_name = ?`,
+		date, lab,
+	).Scan(&reportID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("reading not found")
+	}
+	if err != nil {
+		return fmt.Errorf("find report: %w", err)
+	}
+
+	res, err := s.db.Exec(
+		`DELETE FROM test_results WHERE report_id = ? AND test_code = ?`,
+		reportID, markerCode,
+	)
+	if err != nil {
+		return fmt.Errorf("delete reading: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("reading not found")
+	}
+
+	// Remove the report if it is now empty
+	var remaining int
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM test_results WHERE report_id = ?`, reportID).Scan(&remaining)
+	if remaining == 0 {
+		_, _ = s.db.Exec(`DELETE FROM reports WHERE id = ?`, reportID)
+	}
+	return nil
+}
+
+// CreateOrUpdateMarker upserts a marker definition.
+// Returns merged=true when an existing marker was updated.
+func (s *Store) CreateOrUpdateMarker(req CreateMarkerRequest) (merged bool, err error) {
+	var count int
+	if err = s.db.QueryRow(`SELECT COUNT(*) FROM markers WHERE code = ?`, req.Code).Scan(&count); err != nil {
+		return false, fmt.Errorf("check marker: %w", err)
+	}
+	merged = count > 0
+
+	_, err = s.db.Exec(`
+		INSERT INTO markers (code, name, unit, category, ref_min, ref_max, description, value_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(code) DO UPDATE SET
+			name        = excluded.name,
+			unit        = excluded.unit,
+			category    = excluded.category,
+			ref_min     = excluded.ref_min,
+			ref_max     = excluded.ref_max,
+			description = excluded.description,
+			value_type  = excluded.value_type
+	`, req.Code, req.Name, req.Unit, req.Category, req.RefMin, req.RefMax, req.Description, req.ValueType)
+	if err != nil {
+		return false, fmt.Errorf("upsert marker: %w", err)
+	}
+	return merged, nil
+}
+
+// DeleteMarker removes a marker and all its associated test results.
+func (s *Store) DeleteMarker(code string) error {
+	// Delete all test results for this marker code
+	if _, err := s.db.Exec(`DELETE FROM test_results WHERE test_code = ?`, code); err != nil {
+		return fmt.Errorf("delete test results: %w", err)
+	}
+	// Delete from user-defined markers table (may not exist, ignore)
+	if _, err := s.db.Exec(`DELETE FROM markers WHERE code = ?`, code); err != nil {
+		return fmt.Errorf("delete marker: %w", err)
+	}
+	// Clean up any reports that are now empty
+	if _, err := s.db.Exec(`DELETE FROM reports WHERE id NOT IN (SELECT DISTINCT report_id FROM test_results)`); err != nil {
+		return fmt.Errorf("prune empty reports: %w", err)
+	}
+	return nil
 }
 
 // GetAnnotations returns timeline annotations (empty for now, can be extended)

@@ -12,8 +12,26 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ marker, categories, density, showBand, chartType, onOpen }: SummaryCardProps) {
-  const cat = categories[marker.category];
+  const cat = categories[marker.category] ?? { label: marker.category || 'Custom', color: 'oklch(0.65 0.12 195)', tint: 'oklch(0.965 0.022 195)' };
   const latest = marker.values[marker.values.length - 1];
+
+  if (!latest) {
+    return (
+      <button
+        className={`card card--empty ${density === 'compact' ? 'card--compact' : ''}`}
+        style={{ color: cat.color, '--tint': cat.tint } as React.CSSProperties}
+        onClick={() => onOpen(marker)}
+      >
+        <div className="card-head">
+          <div className="card-cat">{cat.label}</div>
+        </div>
+        <div className="card-name">{marker.name}</div>
+        {marker.unit && <div className="card-empty-unit">{marker.unit}</div>}
+        <div className="card-empty-hint">No readings · click to add</div>
+      </button>
+    );
+  }
+
   const prev = marker.values[marker.values.length - 2];
   const d = prev ? deltaPct(latest.value, prev.value) : 0;
   // For text-only results, use flagged status; for numeric, use range comparison
@@ -22,10 +40,6 @@ export function SummaryCard({ marker, categories, density, showBand, chartType, 
     : rangeStatus(latest.value, marker.refLow, marker.refHigh);
   // Check if this is a text-only result (has label but refLow/refHigh are null)
   const isTextOnly = latest.label && marker.refLow === null && marker.refHigh === null;
-
-  if (!cat || !latest) {
-    return null;
-  }
 
   return (
     <button
