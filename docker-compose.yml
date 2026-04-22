@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - "${HOME}/Library/Mobile Documents/com~apple~CloudDocs/AnalyzeMe:/data"
+    environment:
+      DB_PATH: /data/blood_tests.db
