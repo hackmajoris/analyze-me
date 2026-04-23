@@ -393,6 +393,20 @@ function App() {
               View on GitHub
             </a>
           </div>
+          <div className="download-buttons">
+            <a href="#" className="download-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="17" cy="6" r="4"/><path d="M12 10c2.21 0 4 1.79 4 4v4M4 10c2.21 0 4 1.79 4 4v4M2 20c0-2 4-5 6-5s4 3 6 3 4-3 6-3c1 0 2 1 2 3"/></svg>
+              <span className="btn-label"><strong>Mac</strong><small>Apple Silicon & Intel</small></span>
+            </a>
+            <a href="#" className="download-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 4 4 10 10 10 10 4"/><polyline points="14 4 14 10 20 10 20 4"/><polyline points="4 14 4 20 10 20 10 14"/><polyline points="14 14 14 20 20 20 20 14"/></svg>
+              <span className="btn-label"><strong>Windows</strong><small>x64 & ARM64</small></span>
+            </a>
+            <a href="#" className="download-btn">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c4.97 0 9 1.71 9 3.8v2.4c0 2.09-4.03 3.8-9 3.8s-9-1.71-9-3.8V5.8C3 3.71 7.03 2 12 2z"/><path d="M3 8v6c0 2.09 4.03 3.8 9 3.8s9-1.71 9-3.8V8"/><path d="M3 14v6c0 2.09 4.03 3.8 9 3.8s9-1.71 9-3.8v-6"/></svg>
+              <span className="btn-label"><strong>Linux</strong><small>x64 & ARM64</small></span>
+            </a>
+          </div>
         </div>
       </section>
 

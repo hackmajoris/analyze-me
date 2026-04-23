@@ -13,3 +13,4 @@ electron/bin/
 electron/dist/
 electron/node_modules/
 pkg/web/dist/*
+.playwright-mcp
