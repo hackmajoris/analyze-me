@@ -1,5 +1,5 @@
 .PHONY: build serve dev test lint fmt clean generate web-dev web-build up down logs ps \
-        electron-install electron-run electron-mac electron-dist electron-reset
+        electron-install electron-run electron-mac electron-win electron-linux electron-dist electron-reset
 
 APP := server
 BIN := .bin/$(APP)
@@ -62,6 +62,18 @@ electron-run: electron/bin/server
 
 electron-mac: electron/bin/server
 	cd electron && npx electron-builder --mac dmg
+
+# Run on a Windows machine (native CGo, no cross-compilation)
+electron-win: web-build
+	@mkdir -p electron/bin
+	go build -ldflags="-s -w" -o electron/bin/server.exe ./cmd/server
+	cd electron && npx electron-builder --win nsis
+
+# Run on a Linux machine
+electron-linux: web-build
+	@mkdir -p electron/bin
+	go build -ldflags="-s -w" -o electron/bin/server ./cmd/server
+	cd electron && npx electron-builder --linux AppImage
 
 electron-dist: electron/bin/server
 	cd electron && npx electron-builder

@@ -8,32 +8,20 @@ builds:
       - CGO_ENABLED=1
     goos:
       - linux
-      - windows
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     overrides:
       - goos: linux
         goarch: arm64
         env:
           - CGO_ENABLED=1
           - CC=aarch64-linux-gnu-gcc
-      - goos: windows
-        goarch: amd64
-        env:
-          - CGO_ENABLED=1
-          - CC=x86_64-w64-mingw32-gcc-posix
     ldflags:
       - -s -w
 
 archives:
   - format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
 
 checksum:
   name_template: checksums.txt

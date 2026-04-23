@@ -6,7 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  # Builds Linux server binaries and creates the GitHub release
+  release-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,13 +21,69 @@ jobs:
           node-version: '20'
       - name: Build frontend
         run: make web-build
-      - name: Install cross-compilation toolchains
+      - name: Install cross-compilation toolchain (arm64)
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
+          sudo apt-get install -y gcc-aarch64-linux-gnu
       - uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Builds macOS Electron DMG (Apple Silicon)
+  electron-mac:
+    needs: release-linux
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build frontend
+        run: make web-build
+      - name: Build Go binary
+        run: |
+          mkdir -p electron/bin
+          go build -ldflags="-s -w" -o electron/bin/server ./cmd/server
+          codesign --sign - --force electron/bin/server
+      - name: Build Electron DMG
+        working-directory: electron
+        run: npm ci && npx electron-builder --mac dmg
+      - name: Upload DMG to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} electron/dist/*.dmg --clobber
+
+  # Builds Windows Electron NSIS installer (x64, native CGo)
+  electron-win:
+    needs: release-linux
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build frontend
+        run: cd web && npm ci && npm run build && cd .. && cp -r web/dist pkg/web/dist
+      - name: Build Go binary
+        run: |
+          mkdir -p electron/bin
+          go build -ldflags="-s -w" -o electron/bin/server.exe ./cmd/server
+      - name: Build Electron Windows installer
+        working-directory: electron
+        run: npm ci && npx electron-builder --win nsis
+      - name: Upload installer to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} electron/dist/*.exe --clobber

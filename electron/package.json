@@ -13,13 +13,26 @@
     "productName": "Analyze Me",
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.medical"
+      "category": "public.app-category.medical",
+      "extraResources": [
+        { "from": "bin/server",  "to": "server" },
+        { "from": "../web/dist", "to": "web/dist" }
+      ]
     },
-    "extraResources": [
-      { "from": "bin/server",     "to": "server",          "filter": ["!*.exe"] },
-      { "from": "bin/server.exe", "to": "server.exe",      "filter": ["*.exe"] },
-      { "from": "../web/dist",    "to": "web/dist" }
-    ]
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "extraResources": [
+        { "from": "bin/server.exe", "to": "server.exe" },
+        { "from": "../web/dist",    "to": "web/dist" }
+      ]
+    },
+    "linux": {
+      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "extraResources": [
+        { "from": "bin/server",  "to": "server" },
+        { "from": "../web/dist", "to": "web/dist" }
+      ]
+    }
   },
   "devDependencies": {
     "electron": "^33.0.0",
