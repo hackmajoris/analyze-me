@@ -4,17 +4,28 @@ builds:
   - id: analyze-me
     main: ./cmd/server
     binary: analyze-me
+    env:
+      - CGO_ENABLED=1
     goos:
       - linux
-      - darwin
       - windows
     goarch:
       - amd64
       - arm64
-      - "386"
     ignore:
       - goos: windows
-        goarch: "386"
+        goarch: arm64
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=aarch64-linux-gnu-gcc
+      - goos: windows
+        goarch: amd64
+        env:
+          - CGO_ENABLED=1
+          - CC=x86_64-w64-mingw32-gcc
     ldflags:
       - -s -w
 
