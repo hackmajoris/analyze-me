@@ -1,0 +1,41 @@
+version: 2
+
+builds:
+  - id: analyze-me
+    main: ./cmd/server
+    binary: analyze-me
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    ignore:
+      - goos: windows
+        goarch: "386"
+    ldflags:
+      - -s -w
+
+archives:
+  - id: tarballs
+    format: tar.gz
+    goos:
+      - linux
+      - darwin
+  - id: zips
+    format: zip
+    goos:
+      - windows
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
