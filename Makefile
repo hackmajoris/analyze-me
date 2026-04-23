@@ -38,6 +38,9 @@ dev: build
 web-dev:
 	cd web && npm run dev
 
+site-dev:
+	cd site && npm run dev
+
 web-build:
 	cd web && npm ci && npm run build
 	cp -r web/dist pkg/web/dist
