@@ -263,7 +263,7 @@ function App() {
                 <div className="screenshot-dot" />
                 <div className="screenshot-dot" />
               </div>
-              <img src="/grid-view.png" alt="Grid View showing biomarkers organized by category" className="screenshot-img" />
+              <img src={`${import.meta.env.BASE_URL}grid-view.png`} alt="Grid View showing biomarkers organized by category" className="screenshot-img" />
             </div>
             <div className="screenshot-info">
               <div className="screenshot-title">Grid View</div>
@@ -278,7 +278,7 @@ function App() {
                 <div className="screenshot-dot" />
                 <div className="screenshot-dot" />
               </div>
-              <img src="/timeline-view.png" alt="Timeline View displaying marker trends over time" className="screenshot-img" />
+              <img src={`${import.meta.env.BASE_URL}timeline-view.png`} alt="Timeline View displaying marker trends over time" className="screenshot-img" />
             </div>
             <div className="screenshot-info">
               <div className="screenshot-title">Timeline View</div>
@@ -293,7 +293,7 @@ function App() {
                 <div className="screenshot-dot" />
                 <div className="screenshot-dot" />
               </div>
-              <img src="/detail-modal.png" alt="Detail Modal showing marker statistics and chart" className="screenshot-img" />
+              <img src={`${import.meta.env.BASE_URL}detail-modal.png`} alt="Detail Modal showing marker statistics and chart" className="screenshot-img" />
             </div>
             <div className="screenshot-info">
               <div className="screenshot-title">Detail Modal</div>
@@ -308,7 +308,7 @@ function App() {
                 <div className="screenshot-dot" />
                 <div className="screenshot-dot" />
               </div>
-              <img src="/settings-view.png" alt="Settings View for data import and marker management" className="screenshot-img" />
+              <img src={`${import.meta.env.BASE_URL}settings-view.png`} alt="Settings View for data import and marker management" className="screenshot-img" />
             </div>
             <div className="screenshot-info">
               <div className="screenshot-title">Settings View</div>
