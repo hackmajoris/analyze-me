@@ -239,27 +239,63 @@ function App() {
 
         <div className="screenshots-grid">
           <div className="screenshot-card">
-            <div className="screenshot-title">Grid View</div>
-            <div className="screenshot-desc">See all markers organized by category with sparklines and status indicators</div>
-            <img src="/grid-view.png" alt="Grid View showing biomarkers organized by category" className="screenshot-img" />
+            <div className="screenshot-window">
+              <div className="screenshot-titlebar">
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+              </div>
+              <img src="/grid-view.png" alt="Grid View showing biomarkers organized by category" className="screenshot-img" />
+            </div>
+            <div className="screenshot-info">
+              <div className="screenshot-title">Grid View</div>
+              <div className="screenshot-desc">See all markers organized by category with sparklines and status indicators</div>
+            </div>
           </div>
 
           <div className="screenshot-card">
-            <div className="screenshot-title">Timeline View</div>
-            <div className="screenshot-desc">View detailed trends and historical data with interactive line charts</div>
-            <img src="/timeline-view.png" alt="Timeline View displaying marker trends over time" className="screenshot-img" />
+            <div className="screenshot-window">
+              <div className="screenshot-titlebar">
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+              </div>
+              <img src="/timeline-view.png" alt="Timeline View displaying marker trends over time" className="screenshot-img" />
+            </div>
+            <div className="screenshot-info">
+              <div className="screenshot-title">Timeline View</div>
+              <div className="screenshot-desc">View detailed trends and historical data with interactive line charts</div>
+            </div>
           </div>
 
           <div className="screenshot-card">
-            <div className="screenshot-title">Detail Modal</div>
-            <div className="screenshot-desc">Analyze individual markers with statistics and comparison options</div>
-            <img src="/detail-modal.png" alt="Detail Modal showing marker statistics and chart" className="screenshot-img" />
+            <div className="screenshot-window">
+              <div className="screenshot-titlebar">
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+              </div>
+              <img src="/detail-modal.png" alt="Detail Modal showing marker statistics and chart" className="screenshot-img" />
+            </div>
+            <div className="screenshot-info">
+              <div className="screenshot-title">Detail Modal</div>
+              <div className="screenshot-desc">Analyze individual markers with statistics and comparison options</div>
+            </div>
           </div>
 
           <div className="screenshot-card">
-            <div className="screenshot-title">Settings View</div>
-            <div className="screenshot-desc">Import data, manage marker definitions, and configure your preferences</div>
-            <img src="/settings-view.png" alt="Settings View for data import and marker management" className="screenshot-img" />
+            <div className="screenshot-window">
+              <div className="screenshot-titlebar">
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+                <div className="screenshot-dot" />
+              </div>
+              <img src="/settings-view.png" alt="Settings View for data import and marker management" className="screenshot-img" />
+            </div>
+            <div className="screenshot-info">
+              <div className="screenshot-title">Settings View</div>
+              <div className="screenshot-desc">Import data, manage marker definitions, and configure your preferences</div>
+            </div>
           </div>
         </div>
       </section>
