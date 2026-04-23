@@ -95,12 +95,16 @@ func run(args []string, out io.Writer) error {
 			test_code      TEXT,
 			result_numeric REAL,
 			result_text    TEXT,
+			expected_text  TEXT,
 			unit           TEXT,
 			ref_min        REAL,
 			ref_max        REAL,
 			is_flagged     INTEGER DEFAULT 0,
 			UNIQUE(report_id, test_name)
 		)`},
+		// Additive column migration — safe to run on existing databases;
+		// SQLite returns an error if the column already exists, which we ignore.
+		{"test_results_expected_text", `ALTER TABLE test_results ADD COLUMN expected_text TEXT`},
 		{"markers", `CREATE TABLE IF NOT EXISTS markers (
 			code        TEXT PRIMARY KEY,
 			name        TEXT NOT NULL DEFAULT '',
@@ -114,6 +118,11 @@ func run(args []string, out io.Writer) error {
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {
+			// ALTER TABLE ADD COLUMN fails with "duplicate column name" when the
+			// column already exists (older databases). That is expected — skip it.
+			if strings.Contains(err.Error(), "duplicate column name") {
+				continue
+			}
 			return fmt.Errorf("migrate %s table: %w", m.name, err)
 		}
 	}
@@ -121,7 +130,7 @@ func run(args []string, out io.Writer) error {
 	// Wire up blood test service
 	store := bloodtest.NewStore(db)
 	handler := bloodtest.NewHandler(store)
-	uploadHandler := upload.NewHandler()
+	uploadHandler := upload.NewHandler(store)
 
 	// Register API routes
 	mux := http.NewServeMux()
@@ -131,6 +140,8 @@ func run(args []string, out io.Writer) error {
 	mux.HandleFunc("/api/labs", handler.HandleGetLabs)
 	mux.HandleFunc("/api/readings", handler.HandleReadings)
 	mux.HandleFunc("/api/upload/zip", uploadHandler.HandleUploadZip)
+	mux.HandleFunc("/api/upload/csv/template", uploadHandler.HandleCSVTemplate)
+	mux.HandleFunc("/api/upload/csv", uploadHandler.HandleCSVImport)
 
 	// Serve web app (SPA fallback)
 	mux.Handle("/", web.Handler())

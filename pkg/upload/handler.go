@@ -11,14 +11,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/hackmajoris/analyze-me/pkg/bloodtest"
 )
 
 // Handler serves upload endpoints.
-type Handler struct{}
+type Handler struct {
+	store *bloodtest.Store
+}
 
 // NewHandler creates a new Handler.
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(store *bloodtest.Store) *Handler {
+	return &Handler{store: store}
 }
 
 type sseEvent struct {

@@ -13,6 +13,13 @@ export function SettingsView() {
   const [logs, setLogs] = useState<string[]>([]);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // CSV import state
+  const csvFileRef = useRef<HTMLInputElement>(null);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [csvStatus, setCsvStatus] = useState<Status>('idle');
+  const [csvResult, setCsvResult] = useState<{ imported: number; errors: string[] } | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
   const [markerModalOpen, setMarkerModalOpen] = useState(false);
   const [markerKey, setMarkerKey] = useState(0); // bump to force re-mount after create
   const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
@@ -88,6 +95,47 @@ export function SettingsView() {
     setStatus('idle');
   }
 
+  function handleCsvFileChange() {
+    const file = csvFileRef.current?.files?.[0];
+    setCsvFileName(file ? file.name : null);
+    setCsvResult(null);
+    setCsvError(null);
+    setCsvStatus('idle');
+  }
+
+  function handleDownloadTemplate() {
+    const a = document.createElement('a');
+    a.href = '/api/upload/csv/template';
+    a.download = 'markers_template.csv';
+    a.click();
+  }
+
+  async function handleCsvImport(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const file = csvFileRef.current?.files?.[0];
+    if (!file) return;
+
+    setCsvStatus('uploading');
+    setCsvResult(null);
+    setCsvError(null);
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload/csv', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`Server returned ${res.status} ${res.statusText}`);
+      const data = await res.json() as { imported: number; errors: string[] };
+      setCsvResult(data);
+    } catch (err) {
+      setCsvError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setCsvStatus('done');
+      if (csvFileRef.current) csvFileRef.current.value = '';
+      setCsvFileName(null);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
@@ -145,6 +193,7 @@ export function SettingsView() {
   }
 
   const busy = status === 'uploading';
+  const csvBusy = csvStatus === 'uploading';
 
   return (
     <div className="view settings-view">
@@ -206,6 +255,54 @@ export function SettingsView() {
               {logs.join('\n')}
               <span ref={logsEndRef} />
             </pre>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-section">
+        <h2 className="settings-section-title">Import / Export CSV</h2>
+        <p className="settings-section-desc">
+          Download a CSV template with example markers and readings, fill it in, then
+          upload it to create or update markers and add readings in bulk.
+        </p>
+
+        <button className="import-btn" onClick={handleDownloadTemplate} style={{ marginBottom: 12 }}>
+          Download template
+        </button>
+
+        <form className="upload-form" onSubmit={handleCsvImport}>
+          <label className="file-pick">
+            <input
+              ref={csvFileRef}
+              type="file"
+              name="file"
+              accept=".csv,text/csv"
+              required
+              onChange={handleCsvFileChange}
+            />
+            <span className="file-pick-btn">Choose CSV…</span>
+            <span className="file-pick-name">{csvFileName ?? 'No file chosen'}</span>
+          </label>
+          <button type="submit" className="import-btn" disabled={csvBusy || !csvFileName}>
+            {csvBusy ? 'Importing…' : 'Import CSV'}
+          </button>
+        </form>
+
+        {csvError && (
+          <div className="import-result import-result--error">
+            <div className="import-result-status">Error: {csvError}</div>
+          </div>
+        )}
+
+        {csvResult && (
+          <div className={`import-result ${csvResult.errors.length === 0 ? 'import-result--ok' : 'import-result--error'}`}>
+            <div className="import-result-status">
+              {csvResult.imported} marker{csvResult.imported !== 1 ? 's' : ''} imported
+              {csvResult.errors.length > 0 ? ` · ${csvResult.errors.length} error${csvResult.errors.length !== 1 ? 's' : ''}` : '.'}
+            </div>
+            {csvResult.errors.length > 0 && (
+              <pre className="import-logs">{csvResult.errors.join('\n')}</pre>
+            )}
           </div>
         )}
       </div>

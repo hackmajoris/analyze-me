@@ -27,11 +27,12 @@ generate:
 	go generate ./...
 
 dev: build
+	@mkdir -p data
 	npx --prefix web concurrently \
 		--names "server,web" \
 		--prefix-colors "cyan.bold,green.bold" \
 		--kill-others-on-fail \
-		"$(BIN)" \
+		"DB_PATH=data/blood_tests.db $(BIN)" \
 		"cd web && npm run dev"
 
 web-dev:
