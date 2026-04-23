@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   # Builds Linux server binaries and creates the GitHub release
   release-linux:
