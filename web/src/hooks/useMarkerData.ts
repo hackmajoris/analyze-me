@@ -7,7 +7,7 @@ export function useLabs() {
 
   useEffect(() => {
     const service = createMarkerService();
-    service.getLabs().then(setLabs).catch(console.error);
+    service.getLabs().then(data => setLabs(data ?? [])).catch(console.error);
   }, []);
 
   return labs;
@@ -29,9 +29,9 @@ export function useMarkerData(selectedLab = 'all', reloadSignal = 0) {
       service.getAnnotations(),
     ])
       .then(([m, c, a]) => {
-        setMarkers(m);
-        setCategories(c);
-        setAnnotations(a);
+        setMarkers(m ?? []);
+        setCategories(c ?? {});
+        setAnnotations(a ?? []);
       })
       .catch(err => {
         setError(err.message);

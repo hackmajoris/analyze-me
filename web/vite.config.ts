@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  // Relative base so the built HTML works both served via HTTP (Go) and
+  // loaded as a local file (Electron setup flow via loadFile).
+  base: "./",
   build: {
     outDir: "dist",
     emptyOutDir: true,

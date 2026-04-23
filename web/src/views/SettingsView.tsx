@@ -20,6 +20,16 @@ export function SettingsView() {
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+  // Electron-only: database config
+  const isElectron = !!window.electronAPI;
+  const [dbPath, setDbPath] = useState<string | null>(null);
+  const [keySet, setKeySet] = useState(false);
+  const [changingKey, setChangingKey] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newKeyConfirm, setNewKeyConfirm] = useState('');
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+
   // Auto-scroll logs to bottom as they arrive.
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,6 +42,29 @@ export function SettingsView() {
   useEffect(() => {
     loadMarkers();
   }, [markerKey]);
+
+  useEffect(() => {
+    if (!isElectron) return;
+    window.electronAPI!.getConfig().then(cfg => {
+      setDbPath(cfg.dbPath);
+      setKeySet(cfg.keySet);
+    });
+  }, [isElectron]);
+
+  async function handleChangeKey(e: React.FormEvent) {
+    e.preventDefault();
+    if (newKey !== newKeyConfirm) { setKeyError('Keys do not match.'); return; }
+    setKeyError(null);
+    const result = await window.electronAPI!.changeKey(newKey);
+    if (result.ok) {
+      setKeySet(true);
+      setChangingKey(false);
+      setNewKey('');
+      setNewKeyConfirm('');
+    } else {
+      setKeyError(result.error ?? 'Failed to change key.');
+    }
+  }
 
   async function handleDeleteMarker(code: string) {
     setDeletingCode(code);
@@ -250,6 +283,82 @@ export function SettingsView() {
           onClose={() => setEditingMarker(null)}
           onCreated={() => { setMarkerKey(k => k + 1); setEditingMarker(null); }}
         />
+      )}
+
+      {isElectron && (
+        <div className="settings-section">
+          <h2 className="settings-section-title">Database</h2>
+          <p className="settings-section-desc">
+            Database file location and encryption settings.
+          </p>
+
+          <div className="settings-row">
+            <span className="settings-row-label">Location</span>
+            <span className="settings-row-value">{dbPath ?? '—'}</span>
+          </div>
+
+          <div className="settings-row">
+            <span className="settings-row-label">Encryption key</span>
+            <span className="settings-row-value">{keySet ? '••••••••' : 'Not set'}</span>
+            <button className="import-btn" onClick={() => { setChangingKey(v => !v); setKeyError(null); setNewKey(''); setNewKeyConfirm(''); }}>
+              {changingKey ? 'Cancel' : 'Change key'}
+            </button>
+          </div>
+
+          {changingKey && (
+            <form className="key-change-form" onSubmit={handleChangeKey}>
+              <p className="settings-key-warning">
+                If you lose your encryption key, your data will be permanently inaccessible.
+                Store it in a password manager.
+              </p>
+              <input
+                type="password"
+                className="settings-key-input"
+                placeholder="New encryption key"
+                value={newKey}
+                onChange={e => setNewKey(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="settings-key-input"
+                placeholder="Confirm new key"
+                value={newKeyConfirm}
+                onChange={e => setNewKeyConfirm(e.target.value)}
+                required
+              />
+              {keyError && <p className="settings-key-error">{keyError}</p>}
+              <button type="submit" className="import-btn" disabled={!newKey || !newKeyConfirm}>
+                Set new key
+              </button>
+            </form>
+          )}
+
+          <div className="settings-row" style={{ marginTop: 20, borderTop: '1px solid var(--line)', paddingTop: 20 }}>
+            <span className="settings-row-label">Reset</span>
+            <span className="settings-row-value" style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+              Clears the saved database path and encryption key. The database file itself is not deleted.
+            </span>
+            {confirmReset ? (
+              <>
+                <button
+                  className="import-btn"
+                  style={{ background: 'oklch(0.62 0.18 28)' }}
+                  onClick={() => window.electronAPI!.resetConfig()}
+                >
+                  Yes, reset
+                </button>
+                <button className="form-btn-secondary" onClick={() => setConfirmReset(false)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="form-btn-secondary" onClick={() => setConfirmReset(true)}>
+                Reset…
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

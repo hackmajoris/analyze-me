@@ -3,9 +3,11 @@ import type { Density, ChartType } from './types';
 import { GridView } from './views/GridView';
 import { TimelineView } from './views/TimelineView';
 import { SettingsView } from './views/SettingsView';
+import { SetupView } from './views/SetupView';
 import { useLabs } from './hooks/useMarkerData';
 
 type Variation = 'grid' | 'timeline' | 'settings';
+type AppState = 'checking' | 'setup' | 'ready';
 
 const DEFAULTS = {
   density: 'compact' as Density,
@@ -15,6 +17,18 @@ const DEFAULTS = {
 };
 
 export function App() {
+  const [appState, setAppState] = useState<AppState>(
+    () => window.electronAPI ? 'checking' : 'ready'
+  );
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    document.body.classList.add('electron');
+    window.electronAPI.getConfig().then(cfg => {
+      setAppState(cfg.configured ? 'ready' : 'setup');
+    });
+  }, []);
+
   const [variation, setVariation] = useState<Variation>(
     () => (localStorage.getItem('as-variation') as Variation) || 'grid'
   );
@@ -34,6 +48,9 @@ export function App() {
   useEffect(() => {
     localStorage.setItem('as-variation', variation);
   }, [variation]);
+
+  if (appState === 'checking') return null;
+  if (appState === 'setup') return <SetupView />;
 
   return (
     <>
@@ -92,10 +109,10 @@ export function App() {
       </nav>
 
       {variation === 'grid' && (
-        <GridView density={density} showBand={showBand} chartType={chartType} selectedLab={selectedLab} />
+        <GridView density={density} showBand={showBand} chartType={chartType} selectedLab={selectedLab} onGoToSettings={() => setVariation('settings')} />
       )}
       {variation === 'timeline' && (
-        <TimelineView showBand={showBand} chartType={chartType} selectedLab={selectedLab} />
+        <TimelineView showBand={showBand} chartType={chartType} selectedLab={selectedLab} onGoToSettings={() => setVariation('settings')} />
       )}
       {variation === 'settings' && (
         <SettingsView />

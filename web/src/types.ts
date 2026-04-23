@@ -47,3 +47,18 @@ export interface CreateMarkerRequest {
 export type RangeStatus = 'ok' | 'warn' | 'high';
 export type ChartType = 'line' | 'bar' | 'dots';
 export type Density = 'comfortable' | 'compact';
+
+// Injected by electron/preload.js — only present when running inside Electron.
+declare global {
+  interface Window {
+    electronAPI?: {
+      isElectron: true;
+      pickDbFolder:  () => Promise<string | null>;
+      pickDbFile:    () => Promise<string | null>;
+      completeSetup: (data: { dbFolder?: string; dbPath?: string; encryptionKey: string }) => Promise<{ ok: boolean; error?: string }>;
+      getConfig:     () => Promise<{ configured: boolean; dbPath: string | null; keySet: boolean }>;
+      changeKey:     (newKey: string) => Promise<{ ok: boolean; error?: string }>;
+      resetConfig:   () => Promise<void>;
+    };
+  }
+}

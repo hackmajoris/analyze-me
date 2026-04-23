@@ -1,0 +1,28 @@
+{
+  "name": "analyze-me",
+  "version": "1.0.0",
+  "description": "Blood test analyzer",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.analyzeme.app",
+    "productName": "Analyze Me",
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.medical"
+    },
+    "extraResources": [
+      { "from": "bin/server",     "to": "server",          "filter": ["!*.exe"] },
+      { "from": "bin/server.exe", "to": "server.exe",      "filter": ["*.exe"] },
+      { "from": "../web/dist",    "to": "web/dist" }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

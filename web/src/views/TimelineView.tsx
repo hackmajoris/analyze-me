@@ -15,9 +15,10 @@ interface TimelineViewProps {
   showBand: boolean;
   chartType: ChartType;
   selectedLab: string;
+  onGoToSettings?: () => void;
 }
 
-export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewProps) {
+export function TimelineView({ showBand, chartType, selectedLab, onGoToSettings }: TimelineViewProps) {
   const { markers: allMarkers, categories, annotations, loading, error } = useMarkerData(selectedLab);
   const markers = allMarkers.filter(m => m.values.length > 0);
   const [selectedId, setSelectedId] = useState('');
@@ -41,14 +42,26 @@ export function TimelineView({ showBand, chartType, selectedLab }: TimelineViewP
     return <div className="view view-timeline"><aside className="sidebar"><h1 className="view-title">Loading...</h1></aside></div>;
   }
 
-  if (error) {
-    return <div className="view view-timeline"><aside className="sidebar"><h1 className="view-title">Error: {error}</h1></aside></div>;
+  if (error || !markers.length) {
+    return (
+      <div className="view view-timeline">
+        <div className="empty-state empty-state--full">
+          <div className="empty-state-icon">⚗</div>
+          <h2 className="empty-state-title">No data yet</h2>
+          <p className="empty-state-body">
+            Import your blood test reports to get started.
+          </p>
+          {onGoToSettings && (
+            <button className="empty-state-btn" onClick={onGoToSettings}>
+              Go to Settings
+            </button>
+          )}
+        </div>
+      </div>
+    );
   }
 
-  const selected = markers.find(m => m.id === selectedId);
-  if (!selected) {
-    return <div className="view view-timeline"><aside className="sidebar"><h1 className="view-title">No data available</h1></aside></div>;
-  }
+  const selected = markers.find(m => m.id === selectedId) ?? markers[0];
 
   const compare = compareId ? (markers.find(m => m.id === compareId) ?? null) : null;
   const cat = categories[selected.category];

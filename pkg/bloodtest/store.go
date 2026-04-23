@@ -279,7 +279,7 @@ func (s *Store) GetLabs() ([]string, error) {
 	}
 	defer rows.Close()
 
-	var labs []string
+	labs := make([]string, 0)
 	for rows.Next() {
 		var lab string
 		if err := rows.Scan(&lab); err != nil {

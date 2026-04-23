@@ -12,12 +12,13 @@ The app reads the database encryption key from macOS Keychain. Store it once bef
 security add-generic-password -a analyze-me -s analyze-me-db-key -w "your_key"
 ```
 
-Then use `run.sh` instead of `docker compose` directly — it retrieves the key automatically:
+Then use the Makefile targets — they retrieve the key automatically:
 
 ```bash
-./run.sh up --build   # start (and build)
-./run.sh up -d        # start in background
-./run.sh down         # stop
+make up       # start containers in detached mode
+make down     # stop containers
+make logs     # tail container logs
+make ps       # show container status
 ```
 
 Open [http://localhost:8080](http://localhost:8080).

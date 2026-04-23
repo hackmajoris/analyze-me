@@ -57,6 +57,19 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
   flex-wrap: wrap;
 }
 
+/* Electron: make the nav bar draggable to move the window.
+   Traffic lights sit at ~12px from left, ~72px wide — push content clear. */
+body.electron .topnav {
+  -webkit-app-region: drag;
+  padding-left: 80px;
+}
+
+body.electron .topnav button,
+body.electron .topnav select,
+body.electron .topnav a {
+  -webkit-app-region: no-drag;
+}
+
 .brand {
   display: flex; align-items: center; gap: 12px;
   font-weight: 700; font-size: 15px; letter-spacing: -0.01em;
@@ -654,6 +667,119 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
   .readings-grid { grid-template-columns: 1fr; }
 }
 
+/* ---------- Empty state ---------- */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 80px 32px; gap: 12px;
+}
+
+.empty-state-icon {
+  font-size: 40px; line-height: 1; margin-bottom: 4px;
+  opacity: 0.4;
+}
+
+.empty-state-title {
+  font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+  margin: 0; color: var(--text);
+}
+
+.empty-state-body {
+  font-size: 13px; color: var(--text-dim); margin: 0; line-height: 1.55; max-width: 280px;
+}
+
+.empty-state-btn {
+  margin-top: 8px;
+  padding: 8px 20px; border-radius: 8px;
+  background: var(--text); color: var(--bg);
+  font-size: 13px; font-weight: 600;
+  transition: opacity 0.15s;
+}
+.empty-state-btn:hover { opacity: 0.85; }
+
+.empty-state--full { grid-column: 1 / -1; }
+
+/* ---------- Setup view (Electron first-run) ---------- */
+.setup-overlay {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  /* account for macOS traffic lights */
+  padding-top: 28px;
+}
+
+.setup-card {
+  width: 420px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.setup-brand { margin-bottom: 24px; }
+
+.setup-title {
+  font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.setup-subtitle {
+  font-size: 13px; color: var(--text-dim); margin: 0 0 24px; line-height: 1.5;
+}
+
+.setup-field { margin-bottom: 16px; }
+
+.setup-label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.setup-input-row { display: flex; gap: 8px; }
+
+.setup-input {
+  flex: 1; min-width: 0;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--line-strong);
+  font-size: 13px; color: var(--text); font-family: inherit;
+  outline: none; transition: border-color 0.15s;
+}
+.setup-input:focus { border-color: var(--text-faint); }
+
+.setup-browse-btn {
+  flex-shrink: 0; padding: 8px 14px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--line-strong);
+  font-size: 13px; color: var(--text-dim); cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.setup-browse-btn:hover { border-color: var(--text-faint); color: var(--text); }
+
+.setup-warning {
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 20px;
+  font-size: 12px; line-height: 1.55;
+  background: oklch(0.96 0.04 65); color: oklch(0.48 0.12 65);
+  border: 1px solid oklch(0.88 0.08 65);
+}
+.setup-warning strong { font-weight: 600; }
+
+:root[data-theme="dark"] .setup-warning {
+  background: oklch(0.25 0.05 65); color: oklch(0.82 0.1 65);
+  border-color: oklch(0.4 0.08 65);
+}
+
+.setup-error {
+  margin: 0 0 12px; font-size: 12px; color: oklch(0.62 0.18 28);
+}
+
+.setup-submit {
+  width: 100%; padding: 10px; border-radius: 8px;
+  background: var(--text); color: var(--bg);
+  font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  transition: opacity 0.15s;
+}
+.setup-submit:not(:disabled):hover { opacity: 0.85; }
+.setup-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ---------- Settings view ---------- */
 .settings-view { max-width: 680px; }
 
@@ -754,6 +880,54 @@ button { font: inherit; color: inherit; border: none; background: transparent; c
 }
 
 .settings-section + .settings-section { margin-top: 20px; }
+
+/* ---------- Settings rows (Electron) ---------- */
+.settings-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.settings-row:last-of-type { border-bottom: none; }
+
+.settings-row-label {
+  font-weight: 600; color: var(--text); min-width: 120px;
+}
+
+.settings-row-value {
+  flex: 1; color: var(--text-dim);
+  font-family: 'Menlo', 'Consolas', monospace; font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.key-change-form {
+  margin-top: 18px; display: flex; flex-direction: column; gap: 10px;
+  max-width: 380px;
+}
+
+.settings-key-warning {
+  margin: 0; font-size: 12px; line-height: 1.5;
+  padding: 10px 14px; border-radius: 8px;
+  background: oklch(0.96 0.04 65); color: oklch(0.48 0.12 65);
+  border: 1px solid oklch(0.88 0.08 65);
+}
+
+:root[data-theme="dark"] .settings-key-warning {
+  background: oklch(0.25 0.05 65); color: oklch(0.82 0.1 65);
+  border-color: oklch(0.4 0.08 65);
+}
+
+.settings-key-input {
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--line-strong);
+  font-size: 13px; color: var(--text); font-family: inherit;
+  outline: none; transition: border-color 0.15s;
+}
+
+.settings-key-input:focus { border-color: var(--text-faint); }
+
+.settings-key-error {
+  margin: 0; font-size: 12px; color: oklch(0.62 0.18 28);
+}
 
 /* ---------- Marker list ---------- */
 .marker-list {

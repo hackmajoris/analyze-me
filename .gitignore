@@ -9,3 +9,7 @@ data/blood_tests.db
 data/blood_tests.db.bk
 data/__pycache__/
 .DS_Store
+electron/bin/
+electron/dist/
+electron/node_modules/
+pkg/web/dist/*

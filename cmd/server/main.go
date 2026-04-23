@@ -76,18 +76,46 @@ func run(args []string, out io.Writer) error {
 		return fmt.Errorf("ping database (wrong DB_KEY?): %w", err)
 	}
 
-	// Auto-migrate: user-defined marker definitions
-	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS markers (
-		code        TEXT PRIMARY KEY,
-		name        TEXT NOT NULL DEFAULT '',
-		unit        TEXT NOT NULL DEFAULT '',
-		category    TEXT NOT NULL DEFAULT '',
-		ref_min     REAL,
-		ref_max     REAL,
-		description TEXT NOT NULL DEFAULT '',
-		value_type  TEXT NOT NULL DEFAULT 'numeric'
-	)`); err != nil {
-		return fmt.Errorf("migrate markers table: %w", err)
+	// Auto-migrate: core tables (safe to run on every startup)
+	migrations := []struct {
+		name string
+		sql  string
+	}{
+		{"reports", `CREATE TABLE IF NOT EXISTS reports (
+			id              INTEGER PRIMARY KEY AUTOINCREMENT,
+			collection_date TEXT,
+			lab_name        TEXT,
+			sample_id       TEXT
+		)`},
+		{"test_results", `CREATE TABLE IF NOT EXISTS test_results (
+			id             INTEGER PRIMARY KEY AUTOINCREMENT,
+			report_id      INTEGER REFERENCES reports(id),
+			category       TEXT,
+			test_name      TEXT,
+			test_code      TEXT,
+			result_numeric REAL,
+			result_text    TEXT,
+			unit           TEXT,
+			ref_min        REAL,
+			ref_max        REAL,
+			is_flagged     INTEGER DEFAULT 0,
+			UNIQUE(report_id, test_name)
+		)`},
+		{"markers", `CREATE TABLE IF NOT EXISTS markers (
+			code        TEXT PRIMARY KEY,
+			name        TEXT NOT NULL DEFAULT '',
+			unit        TEXT NOT NULL DEFAULT '',
+			category    TEXT NOT NULL DEFAULT '',
+			ref_min     REAL,
+			ref_max     REAL,
+			description TEXT NOT NULL DEFAULT '',
+			value_type  TEXT NOT NULL DEFAULT 'numeric'
+		)`},
+	}
+	for _, m := range migrations {
+		if _, err := db.Exec(m.sql); err != nil {
+			return fmt.Errorf("migrate %s table: %w", m.name, err)
+		}
 	}
 
 	// Wire up blood test service
@@ -107,14 +135,17 @@ func run(args []string, out io.Writer) error {
 	// Serve web app (SPA fallback)
 	mux.Handle("/", web.Handler())
 
-	// Start server
-	const port = ":8080"
-	listener, err := net.Listen("tcp", port)
+	// Start server — PORT env selects the port; 0 lets the OS pick a free one.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
 
-	_, err = fmt.Fprintf(out, "Server running on http://localhost%s\n", port)
+	_, err = fmt.Fprintf(out, "Server running on http://localhost:%d\n", listener.Addr().(*net.TCPAddr).Port)
 	if err != nil {
 		return err
 	}

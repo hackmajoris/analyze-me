@@ -7,6 +7,7 @@ import { rangeStatus } from '../lib/chartUtils';
 import { exportOutOfRange } from '../lib/exportMarkdown';
 
 interface GridViewProps {
+  onGoToSettings?: () => void;
   density: Density;
   showBand: boolean;
   chartType: ChartType;
@@ -20,7 +21,7 @@ function isOutOfRange(m: Marker): boolean {
   return rangeStatus(latest.value, m.refLow, m.refHigh) === 'high';
 }
 
-export function GridView({ density, showBand, chartType, selectedLab }: GridViewProps) {
+export function GridView({ density, showBand, chartType, selectedLab, onGoToSettings }: GridViewProps) {
   const [reloadSignal, setReloadSignal] = useState(0);
   const { markers, categories, loading, error } = useMarkerData(selectedLab, reloadSignal);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -45,8 +46,23 @@ export function GridView({ density, showBand, chartType, selectedLab }: GridView
     return <div className="view"><div className="view-head"><h1 className="view-title">Loading...</h1></div></div>;
   }
 
-  if (error) {
-    return <div className="view"><div className="view-head"><h1 className="view-title">Error: {error}</h1></div></div>;
+  if (error || markers.length === 0) {
+    return (
+      <div className="view">
+        <div className="empty-state">
+          <div className="empty-state-icon">⚗</div>
+          <h2 className="empty-state-title">No data yet</h2>
+          <p className="empty-state-body">
+            Import your blood test reports to get started.
+          </p>
+          {onGoToSettings && (
+            <button className="empty-state-btn" onClick={onGoToSettings}>
+              Go to Settings
+            </button>
+          )}
+        </div>
+      </div>
+    );
   }
 
   const dateRange = markers.length > 0
