@@ -416,7 +416,7 @@ function App() {
             </a>
           </div>
           <div className="download-buttons">
-            <a href={downloads.mac} className="download-btn" target="_blank" rel="noopener">
+            <a href={downloads.mac} className="download-btn" target="_blank" rel="noopener" title="macOS: if blocked by Gatekeeper, right-click the app → Open">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="17" cy="6" r="4"/><path d="M12 10c2.21 0 4 1.79 4 4v4M4 10c2.21 0 4 1.79 4 4v4M2 20c0-2 4-5 6-5s4 3 6 3 4-3 6-3c1 0 2 1 2 3"/></svg>
               <span className="btn-label"><strong>Mac</strong><small>Apple Silicon & Intel</small></span>
             </a>
@@ -429,6 +429,10 @@ function App() {
               <span className="btn-label"><strong>Linux</strong><small>x64 & ARM64</small></span>
             </a>
           </div>
+          <p className="download-note">
+            <strong>macOS:</strong> if Gatekeeper blocks the app, right-click <em>Analyze Me.app</em> → Open, or run{' '}
+            <code>xattr -cr &quot;/Applications/Analyze Me.app&quot;</code> in Terminal.
+          </p>
         </div>
       </section>
 

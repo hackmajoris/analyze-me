@@ -54,9 +54,18 @@ jobs:
           mkdir -p electron/bin
           go build -ldflags="-s -w" -o electron/bin/server ./cmd/server
           codesign --sign - --force electron/bin/server
-      - name: Build Electron DMG
+bu      - name: Build Electron app
         working-directory: electron
-        run: npm ci && npx electron-builder --mac dmg
+        run: npm ci && npx electron-builder --mac dir
+      - name: Deep-sign app bundle
+        run: |
+          APP=$(find electron/dist -name "*.app" -maxdepth 3 | head -1)
+          codesign --deep --force --sign - "$APP"
+      - name: Package DMG
+        working-directory: electron
+        run: |
+          APP=$(find dist -name "*.app" -maxdepth 3 | head -1)
+          npx electron-builder --mac dmg --prepackaged "$APP"
       - name: Upload DMG to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
