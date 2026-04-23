@@ -162,9 +162,9 @@ function App() {
             <div className="feature-icon" style={{ background: 'oklch(0.28 0.06 250)' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cat-metabolic)" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </div>
-            <div className="feature-title">CSV Import</div>
+            <div className="feature-title">PDF & CSV Import</div>
             <div className="feature-desc">
-              Drop a CSV from any lab. The parser maps columns to markers automatically and flags anything outside reference ranges.
+              Upload ZIP files with PDFs from your lab or drop CSVs. The parser automatically detects markers, units, and reference ranges.
             </div>
           </div>
           <div className="feature-card">
@@ -182,7 +182,7 @@ function App() {
             </div>
             <div className="feature-title">Desktop App</div>
             <div className="feature-desc">
-              Run it as a native Electron app on macOS with system-level keychain encryption and iCloud Drive sync.
+              Native Electron app for Windows, macOS, and Linux with system-level secure storage and optional cloud sync.
             </div>
           </div>
           <div className="feature-card">
@@ -191,7 +191,25 @@ function App() {
             </div>
             <div className="feature-title">Encrypted Storage</div>
             <div className="feature-desc">
-              Database encrypted at rest. The key lives in your macOS Keychain, never in config files or environment variables.
+              Database encrypted at rest. Keys are securely stored in your system: Keychain (macOS), Credential Manager (Windows), or libsecret (Linux).
+            </div>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon" style={{ background: 'oklch(0.28 0.06 75)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cat-lipids)" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </div>
+            <div className="feature-title">Manual Data Entry</div>
+            <div className="feature-desc">
+              Add or remove markers and manually enter readings. Full control over your health data with customizable marker definitions.
+            </div>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon" style={{ background: 'oklch(0.28 0.06 35)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cat-cbc)" strokeWidth="2" strokeLinecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            </div>
+            <div className="feature-title">Marker Comparison</div>
+            <div className="feature-desc">
+              Compare two markers side-by-side on interactive charts. Spot correlations and understand how different biomarkers relate.
             </div>
           </div>
         </div>
@@ -322,18 +340,18 @@ function App() {
             <div className="highlight-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--cat-cbc)" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
-            <div className="highlight-title">iCloud Sync</div>
+            <div className="highlight-title">Cloud Sync</div>
             <div className="highlight-desc">
-              The database file lives in your iCloud Drive, so it syncs between your Macs automatically.
+              On macOS, sync your database across devices via iCloud Drive. Windows and Linux users can configure custom sync solutions.
             </div>
           </div>
           <div className="highlight-card">
             <div className="highlight-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--cat-lipids)" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             </div>
-            <div className="highlight-title">Keychain Encryption</div>
+            <div className="highlight-title">Secure Storage</div>
             <div className="highlight-desc">
-              Encryption key stored in macOS Keychain. Even if someone accesses the DB file, the data is unreadable.
+              Encryption key stored securely using your system's native vault: Keychain (macOS), Credential Manager (Windows), or libsecret (Linux). Even if someone accesses the DB file, the data is unreadable.
             </div>
           </div>
           <div className="highlight-card">
