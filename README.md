@@ -36,7 +36,7 @@ Go 1.22+ • React 18 • TypeScript 5 • Vite 6 • SQLite • Electron • Do
 
 ### Option 1: Docker (Easiest)
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev)
 
 On macOS, store the database encryption key in Keychain first:
 
