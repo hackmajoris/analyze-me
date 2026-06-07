@@ -14,3 +14,6 @@ electron/dist/
 electron/node_modules/
 pkg/web/dist/*
 .playwright-mcp
+docker-compose-local.yml
+run-local.sh
+Makefile-local
