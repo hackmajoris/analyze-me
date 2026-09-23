@@ -55,6 +55,14 @@ make ps       # show container status
 
 Open [http://localhost:8080](http://localhost:8080).
 
+The database is stored in `./data` by default. Set `DATA_DIR` to use another folder, e.g. iCloud Drive:
+
+```bash
+DATA_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/AnalyzeMe" make up
+```
+
+For per-machine overrides, create a gitignored `Makefile-local` (e.g. `COMPOSE_FILE := docker-compose-local.yml`).
+
 On first launch, you'll be prompted to choose where to store your encrypted database. By default on macOS, it uses iCloud Drive for easy sync across devices.
 
 ### Option 2: Build Natively
