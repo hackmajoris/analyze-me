@@ -44,6 +44,8 @@ On macOS, store the database encryption key in Keychain first:
 security add-generic-password -a analyze-me -s analyze-me-db-key -w "your_key"
 ```
 
+On Linux (or to override the Keychain), pass the key via the environment: `DB_KEY="your_key" make up`. Without a key, the database is stored unencrypted.
+
 Then start the app:
 
 ```bash
