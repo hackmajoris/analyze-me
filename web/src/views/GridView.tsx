@@ -3,7 +3,7 @@ import type { Marker, Density, ChartType } from '../types';
 import { useMarkerData } from '../hooks/useMarkerData';
 import { SummaryCard } from '../components/SummaryCard';
 import { DetailModal } from '../components/DetailModal';
-import { rangeStatus } from '../lib/chartUtils';
+import { rangeStatus, lastEntryMarkers, latestEntryDate, fmtDate } from '../lib/chartUtils';
 import { exportOutOfRange } from '../lib/exportMarkdown';
 
 interface GridViewProps {
@@ -29,6 +29,8 @@ export function GridView({ density, showBand, chartType, selectedLab, onGoToSett
   const [filter, setFilter] = useState('all');
 
   const outOfRangeMarkers = useMemo(() => markers.filter(isOutOfRange), [markers]);
+  const lastEntries = useMemo(() => lastEntryMarkers(markers), [markers]);
+  const lastDate = useMemo(() => latestEntryDate(markers), [markers]);
 
   const grouped = useMemo(() => {
     if (filter === 'out-of-range') {
@@ -94,6 +96,16 @@ export function GridView({ density, showBand, chartType, selectedLab, onGoToSett
             All
           </button>
           <button
+            className={`chip ${filter === 'last-entries' ? 'active' : ''}`}
+            onClick={() => setFilter('last-entries')}
+            title={lastDate ? `Markers measured on ${fmtDate(lastDate)}` : undefined}
+          >
+            Last entries
+            {lastEntries.length > 0 && (
+              <span className="chip-badge">{lastEntries.length}</span>
+            )}
+          </button>
+          <button
             className={`chip chip--alarm ${filter === 'out-of-range' ? 'active' : ''}`}
             onClick={() => setFilter('out-of-range')}
           >
@@ -126,6 +138,27 @@ export function GridView({ density, showBand, chartType, selectedLab, onGoToSett
           </div>
           <div className="grid">
             {outOfRangeMarkers.map(m => (
+              <SummaryCard
+                key={m.id}
+                marker={m}
+                categories={categories}
+                density={density}
+                showBand={showBand}
+                chartType={chartType}
+                onOpen={m => setOpenId(m.id)}
+              />
+            ))}
+          </div>
+        </section>
+      ) : filter === 'last-entries' ? (
+        <section className="group">
+          <div className="group-head">
+            <div className="group-swatch" style={{ background: 'oklch(0.65 0.12 195)' }} />
+            <h2 className="group-title">Last entries{lastDate ? ` · ${fmtDate(lastDate)}` : ''}</h2>
+            <div className="group-count">{lastEntries.length} markers</div>
+          </div>
+          <div className="grid">
+            {lastEntries.map(m => (
               <SummaryCard
                 key={m.id}
                 marker={m}

@@ -1,4 +1,4 @@
-import type { RangeStatus } from '../types';
+import type { Marker, RangeStatus } from '../types';
 
 export function rangeStatus(v: number, refLow: number | null, refHigh: number | null): RangeStatus {
   if ((refLow !== null && v < refLow) || (refHigh !== null && v > refHigh)) return 'high';
@@ -35,4 +35,21 @@ export function fmtDate(d: string, opts?: Intl.DateTimeFormatOptions): string {
 export function deltaPct(a: number, b: number): number {
   if (b === 0) return 0;
   return ((a - b) / b) * 100;
+}
+
+// Most recent collection date across all markers (ISO dates sort lexically).
+export function latestEntryDate(markers: Marker[]): string | null {
+  let latest: string | null = null;
+  for (const m of markers) {
+    const d = m.values[m.values.length - 1]?.date;
+    if (d && (latest === null || d > latest)) latest = d;
+  }
+  return latest;
+}
+
+// Markers that have a reading on the most recent collection date.
+export function lastEntryMarkers(markers: Marker[]): Marker[] {
+  const latest = latestEntryDate(markers);
+  if (!latest) return [];
+  return markers.filter(m => m.values.some(v => v.date === latest));
 }

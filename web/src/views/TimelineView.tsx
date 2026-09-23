@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { ChartType, Marker } from '../types';
 import { useMarkerData } from '../hooks/useMarkerData';
-import { rangeStatus, fmtNum, fmtDate, deltaPct, fmtRef } from '../lib/chartUtils';
+import { rangeStatus, fmtNum, fmtDate, deltaPct, fmtRef, lastEntryMarkers, latestEntryDate } from '../lib/chartUtils';
 import { LineChart } from '../components/LineChart';
 
 function isOutOfRange(m: Marker): boolean {
@@ -23,9 +23,11 @@ export function TimelineView({ showBand, chartType, selectedLab, onGoToSettings 
   const markers = allMarkers.filter(m => m.values.length > 0);
   const [selectedId, setSelectedId] = useState('');
   const [compareId, setCompareId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'out-of-range'>('all');
+  const [filter, setFilter] = useState<'all' | 'last-entries' | 'out-of-range'>('all');
 
   const outOfRangeMarkers = useMemo(() => markers.filter(isOutOfRange), [markers]);
+  const lastEntries = useMemo(() => lastEntryMarkers(markers), [markers]);
+  const lastDate = useMemo(() => latestEntryDate(markers), [markers]);
 
   const byCat = useMemo(() => {
     const g: Record<string, typeof markers> = {};
@@ -91,6 +93,16 @@ export function TimelineView({ showBand, chartType, selectedLab, onGoToSettings 
               All
             </button>
             <button
+              className={`chip ${filter === 'last-entries' ? 'active' : ''}`}
+              onClick={() => setFilter('last-entries')}
+              title={lastDate ? `Markers measured on ${fmtDate(lastDate)}` : undefined}
+            >
+              Last entries
+              {lastEntries.length > 0 && (
+                <span className="chip-badge">{lastEntries.length}</span>
+              )}
+            </button>
+            <button
               className={`chip chip--alarm ${filter === 'out-of-range' ? 'active' : ''}`}
               onClick={() => setFilter('out-of-range')}
             >
@@ -101,9 +113,9 @@ export function TimelineView({ showBand, chartType, selectedLab, onGoToSettings 
             </button>
           </div>
         </div>
-        {filter === 'out-of-range' ? (
+        {filter !== 'all' ? (
           <ul className="sidebar-list">
-            {outOfRangeMarkers.map(m => {
+            {(filter === 'out-of-range' ? outOfRangeMarkers : lastEntries).map(m => {
               const lv = m.values[m.values.length - 1];
               const s = lv.flagged ? 'high' : rangeStatus(lv.value, m.refLow, m.refHigh);
               const isSel = m.id === selectedId;
@@ -112,7 +124,7 @@ export function TimelineView({ showBand, chartType, selectedLab, onGoToSettings 
                 <li
                   key={m.id}
                   className={`sidebar-item ${isSel ? 'selected' : ''} ${isCmp ? 'compare' : ''}`}
-                  style={{ '--cat-color': 'oklch(0.62 0.18 28)' } as React.CSSProperties}
+                  style={{ '--cat-color': filter === 'out-of-range' ? 'oklch(0.62 0.18 28)' : categories[m.category]?.color } as React.CSSProperties}
                   onClick={() => setSelectedId(m.id)}
                 >
                   <span className={`status-dot status-${s}`} />
