@@ -54,7 +54,7 @@ jobs:
           mkdir -p electron/bin
           go build -ldflags="-s -w" -o electron/bin/server ./cmd/server
           codesign --sign - --force electron/bin/server
-bu      - name: Build Electron app
+      - name: Build Electron app
         working-directory: electron
         run: npm ci && npx electron-builder --mac dir
       - name: Deep-sign app bundle
