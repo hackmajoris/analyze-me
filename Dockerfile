@@ -22,10 +22,15 @@ RUN CGO_ENABLED=1 GOOS=linux \
 # Stage 3: Minimal runtime (glibc needed for CGO)
 FROM debian:bookworm-slim
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libssl3 \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libssl3 \
+        python3 \
+        poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/.bin/server ./server
+COPY data/extract.py ./data/extract.py
 ENV DB_PATH=/data/blood_tests.db
 EXPOSE 8080
 VOLUME /data

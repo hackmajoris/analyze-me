@@ -130,7 +130,7 @@ func run(args []string, out io.Writer) error {
 	// Wire up blood test service
 	store := bloodtest.NewStore(db)
 	handler := bloodtest.NewHandler(store)
-	uploadHandler := upload.NewHandler(store)
+	uploadHandler := upload.NewHandler(store, dbPath, dbKey)
 
 	// Register API routes
 	mux := http.NewServeMux()

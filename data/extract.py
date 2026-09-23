@@ -11,6 +11,7 @@ Strategy: split by formfeed into individual pages, classify each page,
 group pages by (format, sample_id), then parse each group.
 """
 
+import os
 import random
 import re
 import sqlite3
@@ -19,7 +20,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-DB_PATH  = Path(__file__).parent / "blood_tests.db"
+# DB_PATH env var (set by the Go upload handler) overrides the default.
+_env_db = os.environ.get("DB_PATH")
+DB_PATH  = Path(_env_db) if _env_db else Path(__file__).parent / "blood_tests.db"
 
 # ──────────────────────────────────────────────
 # DB
